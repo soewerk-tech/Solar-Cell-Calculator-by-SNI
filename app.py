@@ -3,46 +3,46 @@ import math
 
 # --- 1. KONFIGURASI HALAMAN ---
 st.set_page_config(
-    page_title="Kalkulator Solar Pro",
+    page_title="Feasibility Study PLTS",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- 2. JUDUL APLIKASI ---
-st.title("☀️ Kalkulator Estimasi Proyek PLTS")
+# --- 2. JUDUL APLIKASI (PROFESIONAL) ---
+st.title("☀️ Kalkulator Studi Kelayakan PLTS")
 st.markdown("""
 <style>
-    .big-font { font-size:18px !important; }
+    .big-font { font-size:16px !important; color: #555; }
 </style>
 <div class="big-font">
-    Simulasi perbandingan biaya investasi (CAPEX), operasional (OPEX), dan titik impas (BEP) 
-    untuk berbagai skema panel surya.
+    Analisis komprehensif kelayakan finansial proyek Pembangkit Listrik Tenaga Surya (PLTS) 
+    mencakup perbandingan skema <b>Capital Expenditure (CAPEX)</b> dan <b>Operational Expenditure (OPEX)</b>.
 </div>
 """, unsafe_allow_html=True)
 
 # --- 3. SIDEBAR INPUT (Parameter) ---
 with st.sidebar:
-    st.header("⚙️ Parameter Proyek")
+    st.header("⚙️ Parameter Teknis")
     
-    with st.expander("A. Beban & Lokasi", expanded=True):
+    with st.expander("A. Profil Beban & Lokasi", expanded=True):
         daya_jam = st.number_input("Rata-rata Beban (kW)", value=1.5, step=0.1)
         jam_ops = st.number_input("Jam Operasional/Hari", value=24, step=1)
         tarif_pln = st.number_input("Tarif Listrik (Rp/kWh)", value=1444, step=100)
         psh = st.number_input("Sun Hours (PSH)", value=3.8, step=0.1)
 
-    with st.expander("B. Spesifikasi Teknis"):
+    with st.expander("B. Spesifikasi Komponen"):
         wp_panel = st.number_input("Kapasitas Panel (Wp)", value=550, step=50)
-        loss_factor = st.number_input("Loss Sistem (%)", value=20, step=5)
+        loss_factor = st.number_input("System Loss (%)", value=20, step=5)
         p_len = st.number_input("Panjang Panel (m)", value=2.3, step=0.1)
         p_wid = st.number_input("Lebar Panel (m)", value=1.1, step=0.1)
         st.markdown("---")
         batt_v = st.number_input("Voltase Baterai (V)", value=48, step=12)
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
 
-    with st.expander("C. Asumsi Harga"):
-        price_panel = st.number_input("Biaya Instalasi/kWp (Rp)", value=14000000, step=500000)
+    with st.expander("C. Asumsi Finansial"):
+        price_panel = st.number_input("Biaya EPC/kWp (Rp)", value=14000000, step=500000)
         price_batt = st.number_input("Harga Baterai/Unit (Rp)", value=16000000, step=500000)
-        opex_discount = st.number_input("Diskon Sewa (%)", value=10, step=1)
+        opex_discount = st.number_input("Diskon Tarif PPA/Sewa (%)", value=10, step=1)
 
 # --- 4. LOGIKA HITUNGAN (FUNGSI) ---
 def calculate():
@@ -58,6 +58,7 @@ def calculate():
     # Fisik
     panel_capacity_kw = wp_panel / 1000
     jumlah_panel = math.ceil(kwp_needed / panel_capacity_kw)
+    total_kapasitas_kwp = jumlah_panel * panel_capacity_kw
     total_luas = jumlah_panel * (p_len * p_wid)
     
     batt_kwh = (batt_v * batt_ah) / 1000
@@ -65,22 +66,19 @@ def calculate():
     qty_batt_off = math.ceil(daya_harian / (batt_kwh * dod))
     qty_batt_hyb = math.ceil((daya_harian * 0.5) / (batt_kwh * dod))
     
-    # CAPEX
+    # CAPEX TOTAL
     base_capex = kwp_needed * price_panel
     capex_on = base_capex + 10000000
     capex_off = base_capex + (qty_batt_off * price_batt) + 25000000
     capex_hyb = base_capex + (qty_batt_hyb * price_batt) + 30000000
     
-    # HITUNGAN MODAL PER KWH (LCOE Simplified - 20 Tahun)
-    # Total produksi listrik sistem selama 20 tahun (asumsi umur panel)
-    lifetime_gen_kwh = (jumlah_panel * panel_capacity_kw) * psh * 365 * 20
-    
-    per_kwh_on = capex_on / lifetime_gen_kwh
-    per_kwh_off = capex_off / lifetime_gen_kwh
-    per_kwh_hyb = capex_hyb / lifetime_gen_kwh
+    # UNIT COST (Biaya Pasang per kWp)
+    unit_cost_on = capex_on / total_kapasitas_kwp
+    unit_cost_off = capex_off / total_kapasitas_kwp
+    unit_cost_hyb = capex_hyb / total_kapasitas_kwp
 
     # BEP & OPEX
-    hemat_on_bln = biaya_pln_bulanan * 0.4
+    hemat_on_bln = biaya_pln_bulanan * 0.4 # Efisiensi 40%
     bep_on = capex_on / (hemat_on_bln * 12) if hemat_on_bln > 0 else 0
     
     hemat_off_bln = biaya_pln_bulanan
@@ -94,10 +92,10 @@ def calculate():
     # Return Data
     return {
         "pln_bln": biaya_pln_bulanan, "daya_harian": daya_harian,
-        "panel_qty": jumlah_panel, "area": total_luas,
+        "panel_qty": jumlah_panel, "kwp_total": total_kapasitas_kwp, "area": total_luas,
         "batt_off": qty_batt_off, "batt_hyb": qty_batt_hyb,
         "capex_on": capex_on, "capex_off": capex_off, "capex_hyb": capex_hyb,
-        "per_kwh_on": per_kwh_on, "per_kwh_off": per_kwh_off, "per_kwh_hyb": per_kwh_hyb, # <-- NEW DATA
+        "unit_on": unit_cost_on, "unit_off": unit_cost_off, "unit_hyb": unit_cost_hyb, # <-- UNIT COST
         "bep_on": bep_on, "bep_off": bep_off, "bep_hyb": bep_hyb,
         "vendor_on": (daya_bulanan * 0.4) * tarif_sewa, 
         "sisa_on": (daya_bulanan * 0.6) * tarif_pln,
@@ -132,32 +130,46 @@ st.markdown("""
     .card-blue { border-top: 8px solid #1976d2; }
     .card-red { border-top: 8px solid #d32f2f; }
     .card-green { border-top: 8px solid #388e3c; }
+    
     .card-title {
-        font-size: 20px;
-        font-weight: 900;
+        font-size: 18px;
+        font-weight: 800;
         text-transform: uppercase;
         margin-bottom: 5px;
         display: block;
     }
-    .card-sub { font-size: 12px; color: #666; margin-bottom: 15px; display: block; }
-    .divider { border-bottom: 1px solid #eee; margin: 10px 0; }
+    .card-sub { font-size: 12px; color: #555; margin-bottom: 15px; display: block; font-style: italic; }
+    .divider { border-bottom: 1px solid #eee; margin: 12px 0; }
+    
     .row-item {
         display: flex;
         justify-content: space-between;
         margin-bottom: 8px;
-        font-size: 14px;
+        font-size: 13px;
+        align-items: center;
     }
-    .val-bold { font-weight: 800; color: #000; }
-    .val-blue { font-weight: 800; color: #1565c0; font-size: 15px; }
-    .val-green { font-weight: 800; color: #2e7d32; font-size: 16px; }
+    
+    /* Font Styles */
+    .val-bold { font-weight: 700; color: #222; }
+    .val-blue { font-weight: 700; color: #1565c0; font-size: 14px; }
+    .val-green { font-weight: 700; color: #2e7d32; font-size: 14px; }
+    
+    /* Section Headers */
     .sec-head {
         font-size: 11px;
-        font-weight: bold;
-        color: #888;
+        font-weight: 700;
+        color: #777;
         text-transform: uppercase;
         margin-top: 15px;
-        margin-bottom: 8px;
-        letter-spacing: 1px;
+        margin-bottom: 10px;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Tag Efisiensi */
+    .tag-warn {
+        background: #fff3e0; color: #e65100; 
+        padding: 2px 6px; border-radius: 4px; 
+        font-size: 10px; font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -165,10 +177,10 @@ st.markdown("""
 # BANNER HEADLINE
 st.markdown(f"""
 <div class="banner-box">
-<h4 style="margin:0; opacity:0.8;">Tagihan Listrik Saat Ini (Baseline)</h4>
-<h1 style="margin:5px 0; font-size: 36px; font-weight: 900;">Rp {res['pln_bln']:,.0f} / Bulan</h1>
-<span style="font-weight: bold; background: #dcedc8; padding: 5px 10px; border-radius: 15px;">
-⚡ Beban Energi: {res['daya_harian']:.1f} kWh / Hari
+<h4 style="margin:0; opacity:0.8; font-size: 14px; text-transform: uppercase;">Baseline Tagihan Listrik (Eksisting)</h4>
+<h1 style="margin:5px 0; font-size: 32px; font-weight: 900;">Rp {res['pln_bln']:,.0f} / Bulan</h1>
+<span style="font-weight: bold; background: #dcedc8; padding: 5px 12px; border-radius: 15px; font-size: 13px;">
+⚡ Konsumsi Energi: {res['daya_harian']:.1f} kWh / Hari
 </span>
 </div>
 """, unsafe_allow_html=True)
@@ -179,24 +191,39 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown(f"""
 <div class="card card-blue">
-<span class="card-title" style="color: #1976d2;">🏙️ ON-GRID</span>
-<span class="card-sub">Hemat Siang Saja (Tanpa Baterai)</span>
-<div class="sec-head">1. Kebutuhan Fisik</div>
-<div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
-<div class="row-item"><span>Luas Atap:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
-<div class="row-item"><span>Baterai:</span><span>-</span></div>
-<div class="divider"></div>
-<div class="sec-head">2. Beli Sendiri (CAPEX)</div>
-<div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_on']:,.0f}</span></div>
-<div class="row-item"><span>Modal per kWh (20 Thn):</span><span class="val-blue">Rp {res['per_kwh_on']:,.0f} /kWh</span></div>
-<div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_on']:.1f} Tahun</span></div>
-<div class="divider"></div>
-<div class="sec-head">3. Sewa Alat (OPEX)</div>
-<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_on']:,.0f}</span></div>
-<div class="row-item"><span>Sisa PLN:</span><span>Rp {res['sisa_on']:,.0f}</span></div>
-<div class="row-item" style="margin-top:5px; background:#e3f2fd; padding:5px; border-radius:5px;">
-<span>Total:</span><span class="val-blue">Rp {(res['vendor_on']+res['sisa_on']):,.0f}</span>
-</div>
+    <div style="display:flex; justify-content:space-between; align-items:start;">
+        <div>
+            <span class="card-title" style="color: #1976d2;">🏙️ ON-GRID SYSTEM</span>
+            <span class="card-sub">Grid-Tied (Tanpa Baterai)</span>
+        </div>
+    </div>
+
+    <div style="background:#e3f2fd; padding:8px; border-radius:6px; font-size:11px; margin-bottom:10px; color:#0d47a1;">
+        <b>⚠️ Efisiensi Terserap: 40%</b><br>
+        <i>Mengacu pada Permen ESDM No. 2/2024 (Tanpa Ekspor Listrik)</i>
+    </div>
+
+    <div class="sec-head">1. Kebutuhan Perangkat</div>
+    <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
+    <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
+    <div class="row-item"><span>Kebutuhan Area:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
+
+    <div class="divider"></div>
+    <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
+    <div class="row-item"><span>Total Investasi:</span><span class="val-bold">Rp {res['capex_on']:,.0f}</span></div>
+    <div class="row-item" title="Biaya Pembangunan per Kapasitas">
+        <span>Biaya per kWp:</span>
+        <span class="val-blue">Rp {res['unit_on']/1000000:.1f} Juta /kWp</span>
+    </div>
+    <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_on']:.1f} Tahun</span></div>
+
+    <div class="divider"></div>
+    <div class="sec-head">3. Analisis Layanan (OPEX)</div>
+    <div class="row-item"><span>Biaya Langganan:</span><span>Rp {res['vendor_on']:,.0f}</span></div>
+    <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp {res['sisa_on']:,.0f}</span></div>
+    <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
+        <span>Total Pengeluaran:</span><span class="val-blue">Rp {(res['vendor_on']+res['sisa_on']):,.0f}</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -204,24 +231,30 @@ with col1:
 with col2:
     st.markdown(f"""
 <div class="card card-red">
-<span class="card-title" style="color: #d32f2f;">🔋 OFF-GRID</span>
-<span class="card-sub">Mandiri Total (Lepas PLN)</span>
-<div class="sec-head">1. Kebutuhan Fisik</div>
-<div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
-<div class="row-item"><span>Luas Atap:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
-<div class="row-item"><span>Baterai:</span><span class="val-bold">{res['batt_off']} Unit</span></div>
-<div class="divider"></div>
-<div class="sec-head">2. Beli Sendiri (CAPEX)</div>
-<div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_off']:,.0f}</span></div>
-<div class="row-item"><span>Modal per kWh (20 Thn):</span><span class="val-blue">Rp {res['per_kwh_off']:,.0f} /kWh</span></div>
-<div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_off']:.1f} Tahun</span></div>
-<div class="divider"></div>
-<div class="sec-head">3. Sewa Alat (OPEX)</div>
-<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_off']:,.0f}</span></div>
-<div class="row-item"><span>Sisa PLN:</span><span>Rp 0</span></div>
-<div class="row-item" style="margin-top:5px; background:#ffebee; padding:5px; border-radius:5px;">
-<span>Total:</span><span class="val-blue">Rp {res['vendor_off']:,.0f}</span>
-</div>
+    <span class="card-title" style="color: #d32f2f;">🔋 OFF-GRID SYSTEM</span>
+    <span class="card-sub">Stand-Alone (Mandiri Total)</span>
+
+    <div class="sec-head">1. Kebutuhan Perangkat</div>
+    <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
+    <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
+    <div class="row-item"><span>Bank Baterai:</span><span class="val-bold">{res['batt_off']} Unit</span></div>
+
+    <div class="divider"></div>
+    <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
+    <div class="row-item"><span>Total Investasi:</span><span class="val-bold">Rp {res['capex_off']:,.0f}</span></div>
+    <div class="row-item" title="Biaya Pembangunan per Kapasitas">
+        <span>Biaya per kWp:</span>
+        <span class="val-blue">Rp {res['unit_off']/1000000:.1f} Juta /kWp</span>
+    </div>
+    <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_off']:.1f} Tahun</span></div>
+
+    <div class="divider"></div>
+    <div class="sec-head">3. Analisis Layanan (OPEX)</div>
+    <div class="row-item"><span>Biaya Langganan:</span><span>Rp {res['vendor_off']:,.0f}</span></div>
+    <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp 0</span></div>
+    <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
+        <span>Total Pengeluaran:</span><span class="val-blue">Rp {res['vendor_off']:,.0f}</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -229,23 +262,29 @@ with col2:
 with col3:
     st.markdown(f"""
 <div class="card card-green">
-<span class="card-title" style="color: #2e7d32;">⚡ HYBRID</span>
-<span class="card-sub">Stabil & Aman (PLN + Baterai)</span>
-<div class="sec-head">1. Kebutuhan Fisik</div>
-<div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
-<div class="row-item"><span>Luas Atap:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
-<div class="row-item"><span>Baterai:</span><span class="val-bold">{res['batt_hyb']} Unit</span></div>
-<div class="divider"></div>
-<div class="sec-head">2. Beli Sendiri (CAPEX)</div>
-<div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_hyb']:,.0f}</span></div>
-<div class="row-item"><span>Modal per kWh (20 Thn):</span><span class="val-blue">Rp {res['per_kwh_hyb']:,.0f} /kWh</span></div>
-<div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
-<div class="divider"></div>
-<div class="sec-head">3. Sewa Alat (OPEX)</div>
-<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
-<div class="row-item"><span>Sisa PLN:</span><span>Rp {res['sisa_hyb']:,.0f}</span></div>
-<div class="row-item" style="margin-top:5px; background:#e8f5e9; padding:5px; border-radius:5px;">
-<span>Total:</span><span class="val-green">Rp {(res['vendor_hyb']+res['sisa_hyb']):,.0f}</span>
-</div>
+    <span class="card-title" style="color: #2e7d32;">⚡ HYBRID SYSTEM</span>
+    <span class="card-sub">Smart Grid (PLN + Storage)</span>
+
+    <div class="sec-head">1. Kebutuhan Perangkat</div>
+    <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
+    <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
+    <div class="row-item"><span>Bank Baterai:</span><span class="val-bold">{res['batt_hyb']} Unit</span></div>
+
+    <div class="divider"></div>
+    <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
+    <div class="row-item"><span>Total Investasi:</span><span class="val-bold">Rp {res['capex_hyb']:,.0f}</span></div>
+    <div class="row-item" title="Biaya Pembangunan per Kapasitas">
+        <span>Biaya per kWp:</span>
+        <span class="val-blue">Rp {res['unit_hyb']/1000000:.1f} Juta /kWp</span>
+    </div>
+    <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
+
+    <div class="divider"></div>
+    <div class="sec-head">3. Analisis Layanan (OPEX)</div>
+    <div class="row-item"><span>Biaya Langganan:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
+    <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp {res['sisa_hyb']:,.0f}</span></div>
+    <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
+        <span>Total Pengeluaran:</span><span class="val-green">Rp {(res['vendor_hyb']+res['sisa_hyb']):,.0f}</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
