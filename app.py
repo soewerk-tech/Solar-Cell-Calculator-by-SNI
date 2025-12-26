@@ -3,14 +3,22 @@ import math
 
 # --- 1. KONFIGURASI HALAMAN ---
 st.set_page_config(
-    page_title="Kalkulator Solar Cell Pro",
+    page_title="Kalkulator Solar Pro",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # --- 2. JUDUL APLIKASI ---
 st.title("☀️ Kalkulator Estimasi Proyek PLTS")
-st.markdown("Simulasi biaya investasi (CAPEX), operasional (OPEX), dan titik impas (BEP).")
+st.markdown("""
+<style>
+    .big-font { font-size:18px !important; }
+</style>
+<div class="big-font">
+    Simulasi perbandingan biaya investasi (CAPEX), operasional (OPEX), dan titik impas (BEP) 
+    untuk berbagai skema panel surya.
+</div>
+""", unsafe_allow_html=True)
 
 # --- 3. SIDEBAR INPUT (Parameter) ---
 with st.sidebar:
@@ -89,79 +97,169 @@ def calculate():
         "sisa_hyb": (daya_bulanan * 0.1) * tarif_pln
     }
 
-# --- 5. EKSEKUSI DAN TAMPILAN (RENDER) ---
-# Bagian ini yang sebelumnya mungkin tidak tercopy
+# --- 5. TAMPILAN CARD UI (RENDER) ---
 res = calculate()
 
-# CSS untuk Mode Gelap
-st.markdown(f"""
+# CSS KHUSUS UNTUK TAMPILAN KARTU CERAH & BOLD
+st.markdown("""
 <style>
-    .banner {{
-        background-color: #2e7d32; 
-        color: white;
-        padding: 20px; 
-        border-radius: 10px; 
+    /* Style untuk Banner Atas */
+    .banner-box {
+        background-color: #f1f8e9; /* Hijau muda cerah */
+        border: 2px solid #c5e1a5;
+        border-radius: 12px;
+        padding: 20px;
         text-align: center;
-        margin-bottom: 25px;
-    }}
-    .highlight {{ font-weight: bold; font-size: 1.1rem; }}
-    .blue {{ color: #42a5f5; }}
-    .green {{ color: #66bb6a; }}
-</style>
+        margin-bottom: 30px;
+        color: #33691e;
+    }
+    
+    /* Style untuk Kartu (Card) */
+    .card {
+        background-color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        color: #333; /* Warna teks abu gelap agar kontras */
+    }
+    
+    /* Border warna-warni di atas kartu */
+    .card-blue { border-top: 8px solid #1976d2; }
+    .card-red { border-top: 8px solid #d32f2f; }
+    .card-green { border-top: 8px solid #388e3c; }
 
-<div class="banner">
-    <h4 style="margin:0;">Tagihan Listrik Baseline</h4>
-    <h2 style="margin:0;">Rp {res['pln_bln']:,.0f} / Bulan</h2>
-    <p style="margin:5px 0;">⚡ Beban: {res['daya_harian']:.1f} kWh / Hari</p>
+    /* Judul Kartu */
+    .card-title {
+        font-size: 20px;
+        font-weight: 900;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+        display: block;
+    }
+    
+    /* Sub-judul kecil */
+    .card-sub { font-size: 12px; color: #666; margin-bottom: 15px; display: block; }
+    
+    /* Garis pemisah */
+    .divider { border-bottom: 1px solid #eee; margin: 10px 0; }
+    
+    /* Label dan Nilai */
+    .row-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    
+    /* Angka Bold */
+    .val-bold { font-weight: 800; color: #000; }
+    .val-blue { font-weight: 800; color: #1565c0; font-size: 15px; }
+    .val-green { font-weight: 800; color: #2e7d32; font-size: 16px; }
+    
+    /* Section Header Kecil */
+    .sec-head {
+        font-size: 11px;
+        font-weight: bold;
+        color: #888;
+        text-transform: uppercase;
+        margin-top: 15px;
+        margin-bottom: 8px;
+        letter-spacing: 1px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- BANNER HASIL ---
+st.markdown(f"""
+<div class="banner-box">
+    <h4 style="margin:0; opacity:0.8;">Tagihan Listrik Saat Ini (Baseline)</h4>
+    <h1 style="margin:5px 0; font-size: 36px; font-weight: 900;">Rp {res['pln_bln']:,.0f} / Bulan</h1>
+    <span style="font-weight: bold; background: #dcedc8; padding: 5px 10px; border-radius: 15px;">
+        ⚡ Beban Energi: {res['daya_harian']:.1f} kWh / Hari
+    </span>
 </div>
 """, unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 
+# --- KOLOM 1: ON GRID ---
 with col1:
-    st.markdown("### 🏙️ ON-GRID")
-    st.info("Koneksi Jaringan (Tanpa Baterai)")
     st.markdown(f"""
-    **FISIK:** {res['panel_qty']} Panel | Area {res['area']:.1f} m²
-    
-    **1. BELI SENDIRI (CAPEX)**
-    * Modal: **Rp {res['capex_on']:,.0f}**
-    * BEP: <span class='blue highlight'>{res['bep_on']:.1f} Tahun</span>
-    
-    **2. SEWA (OPEX)**
-    * Bayar Vendor: Rp {res['vendor_on']:,.0f}
-    * Sisa PLN: Rp {res['sisa_on']:,.0f}
-    * **Total: Rp {(res['vendor_on']+res['sisa_on']):,.0f}**
+    <div class="card card-blue">
+        <span class="card-title" style="color: #1976d2;">🏙️ ON-GRID</span>
+        <span class="card-sub">Hemat Siang Saja (Tanpa Baterai)</span>
+        
+        <div class="sec-head">1. Kebutuhan Fisik</div>
+        <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
+        <div class="row-item"><span>Luas Atap:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
+        <div class="row-item"><span>Baterai:</span><span>-</span></div>
+
+        <div class="divider"></div>
+        <div class="sec-head">2. Beli Sendiri (CAPEX)</div>
+        <div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_on']:,.0f}</span></div>
+        <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_on']:.1f} Tahun</span></div>
+        
+        <div class="divider"></div>
+        <div class="sec-head">3. Sewa Alat (OPEX)</div>
+        <div class="row-item"><span>Bayar Vendor:</span><span>Rp {res['vendor_on']:,.0f}</span></div>
+        <div class="row-item"><span>Sisa PLN:</span><span>Rp {res['sisa_on']:,.0f}</span></div>
+        <div class="row-item" style="margin-top:5px; background:#e3f2fd; padding:5px; border-radius:5px;">
+            <span>Total:</span><span class="val-blue">Rp {(res['vendor_on']+res['sisa_on']):,.0f}</span>
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
+# --- KOLOM 2: OFF GRID ---
 with col2:
-    st.markdown("### 🔋 OFF-GRID")
-    st.error("Mandiri (Lepas Jaringan)")
     st.markdown(f"""
-    **FISIK:** {res['panel_qty']} Panel | {res['batt_off']} Baterai
-    
-    **1. BELI SENDIRI (CAPEX)**
-    * Modal: **Rp {res['capex_off']:,.0f}**
-    * BEP: <span class='blue highlight'>{res['bep_off']:.1f} Tahun</span>
-    
-    **2. SEWA (OPEX)**
-    * Bayar Vendor: Rp {res['vendor_off']:,.0f}
-    * Sisa PLN: Rp 0
-    * **Total: Rp {res['vendor_off']:,.0f}**
+    <div class="card card-red">
+        <span class="card-title" style="color: #d32f2f;">🔋 OFF-GRID</span>
+        <span class="card-sub">Mandiri Total (Lepas PLN)</span>
+        
+        <div class="sec-head">1. Kebutuhan Fisik</div>
+        <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
+        <div class="row-item"><span>Luas Atap:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
+        <div class="row-item"><span>Baterai:</span><span class="val-bold">{res['batt_off']} Unit</span></div>
+
+        <div class="divider"></div>
+        <div class="sec-head">2. Beli Sendiri (CAPEX)</div>
+        <div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_off']:,.0f}</span></div>
+        <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_off']:.1f} Tahun</span></div>
+        
+        <div class="divider"></div>
+        <div class="sec-head">3. Sewa Alat (OPEX)</div>
+        <div class="row-item"><span>Bayar Vendor:</span><span>Rp {res['vendor_off']:,.0f}</span></div>
+        <div class="row-item"><span>Sisa PLN:</span><span>Rp 0</span></div>
+        <div class="row-item" style="margin-top:5px; background:#ffebee; padding:5px; border-radius:5px;">
+            <span>Total:</span><span class="val-blue">Rp {res['vendor_off']:,.0f}</span>
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
+# --- KOLOM 3: HYBRID ---
 with col3:
-    st.markdown("### ⚡ HYBRID")
-    st.success("Kombinasi (Aman & Stabil)")
     st.markdown(f"""
-    **FISIK:** {res['panel_qty']} Panel | {res['batt_hyb']} Baterai
-    
-    **1. BELI SENDIRI (CAPEX)**
-    * Modal: **Rp {res['capex_hyb']:,.0f}**
-    * BEP: <span class='blue highlight'>{res['bep_hyb']:.1f} Tahun</span>
-    
-    **2. SEWA (OPEX)**
-    * Bayar Vendor: Rp {res['vendor_hyb']:,.0f}
-    * Sisa PLN: Rp {res['sisa_hyb']:,.0f}
-    * **Total: Rp {(res['vendor_hyb']+res['sisa_hyb']):,.0f}**
+    <div class="card card-green">
+        <span class="card-title" style="color: #2e7d32;">⚡ HYBRID</span>
+        <span class="card-sub">Stabil & Aman (PLN + Baterai)</span>
+        
+        <div class="sec-head">1. Kebutuhan Fisik</div>
+        <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
+        <div class="row-item"><span>Luas Atap:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
+        <div class="row-item"><span>Baterai:</span><span class="val-bold">{res['batt_hyb']} Unit</span></div>
+
+        <div class="divider"></div>
+        <div class="sec-head">2. Beli Sendiri (CAPEX)</div>
+        <div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_hyb']:,.0f}</span></div>
+        <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
+        
+        <div class="divider"></div>
+        <div class="sec-head">3. Sewa Alat (OPEX)</div>
+        <div class="row-item"><span>Bayar Vendor:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
+        <div class="row-item"><span>Sisa PLN:</span><span>Rp {res['sisa_hyb']:,.0f}</span></div>
+        <div class="row-item" style="margin-top:5px; background:#e8f5e9; padding:5px; border-radius:5px;">
+            <span>Total:</span><span class="val-green">Rp {(res['vendor_hyb']+res['sisa_hyb']):,.0f}</span>
+        </div>
+    </div>
     """, unsafe_allow_html=True)
