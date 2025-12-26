@@ -3,38 +3,38 @@ import math
 
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(
-    page_title="Kalkulator Proyeksi PLTS",
+    page_title="Kalkulator Solar Cell Pro",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- JUDUL ---
-st.title("☀️ Kalkulator Studi Kelayakan PLTS (JPL)")
-st.markdown("Analisis komprehensif CAPEX, OPEX, dan BEP untuk sistem On-Grid, Off-Grid, dan Hybrid.")
+# --- JUDUL APLIKASI (UMUM) ---
+st.title("☀️ Kalkulator Estimasi Proyek PLTS")
+st.markdown("Simulasi biaya investasi (CAPEX), operasional (OPEX), dan titik impas (BEP) untuk berbagai skema panel surya.")
 
 # --- SIDEBAR INPUT ---
 with st.sidebar:
-    st.header("⚙️ Konfigurasi Sistem")
+    st.header("⚙️ Parameter Proyek")
     
-    with st.expander("1. Beban & Tarif", expanded=True):
-        daya_jam = st.number_input("Beban Rata-rata (kW)", value=1.5, step=0.1)
+    with st.expander("1. Beban & Lokasi", expanded=True):
+        daya_jam = st.number_input("Rata-rata Beban (kW)", value=1.5, step=0.1, help="Total daya alat yang menyala dalam satu waktu")
         jam_ops = st.number_input("Jam Operasional/Hari", value=24, step=1)
-        tarif_pln = st.number_input("Tarif PLN (Rp/kWh)", value=1444, step=100)
-        psh = st.number_input("Sun Hours (PSH)", value=3.8, step=0.1)
+        tarif_pln = st.number_input("Tarif Listrik (Rp/kWh)", value=1444, step=100)
+        psh = st.number_input("Sun Hours (PSH)", value=3.8, step=0.1, help="Rata-rata jam matahari efektif di lokasi")
 
-    with st.expander("2. Spesifikasi Fisik"):
-        wp_panel = st.number_input("Power Panel (Wp)", value=550, step=50)
-        loss_factor = st.number_input("System Loss (%)", value=20, step=5)
+    with st.expander("2. Spesifikasi Teknis"):
+        wp_panel = st.number_input("Kapasitas Panel (Wp)", value=550, step=50)
+        loss_factor = st.number_input("Faktor Loss Sistem (%)", value=20, step=5)
         p_len = st.number_input("Panjang Panel (m)", value=2.3, step=0.1)
         p_wid = st.number_input("Lebar Panel (m)", value=1.1, step=0.1)
         st.markdown("---")
         batt_v = st.number_input("Voltase Baterai (V)", value=48, step=12)
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
 
-    with st.expander("3. Harga & OPEX"):
-        price_panel = st.number_input("Biaya Pasang/kWp (Rp)", value=14000000, step=500000)
+    with st.expander("3. Asumsi Harga"):
+        price_panel = st.number_input("Biaya Instalasi/kWp (Rp)", value=14000000, step=500000)
         price_batt = st.number_input("Harga Baterai/Unit (Rp)", value=16000000, step=500000)
-        opex_discount = st.number_input("Diskon Sewa OPEX (%)", value=10, step=1)
+        opex_discount = st.number_input("Diskon Skema Sewa (%)", value=10, step=1, help="Jika menggunakan skema rental/PPA")
 
 # --- LOGIKA PERHITUNGAN ---
 def calculate():
@@ -94,134 +94,4 @@ def calculate():
     bayar_vendor_hyb = (daya_bulanan * 0.9) * tarif_sewa
     sisa_pln_hyb = (daya_bulanan * 0.1) * tarif_pln
     total_opex_hyb = bayar_vendor_hyb + sisa_pln_hyb
-    hemat_opex_hyb = biaya_pln_bulanan - total_opex_hyb
-    
-    return {
-        "pln_bln": biaya_pln_bulanan,
-        "daya_harian": daya_harian, # <-- DATA BARU DITAMBAHKAN
-        "panel_qty": jumlah_panel, "area": total_luas,
-        "batt_off": qty_batt_off, "batt_hyb": qty_batt_hyb,
-        "capex_on": capex_on, "capex_off": capex_off, "capex_hyb": capex_hyb,
-        "bep_on": bep_on, "bep_off": bep_off, "bep_hyb": bep_hyb,
-        "vendor_on": bayar_vendor_on, "sisa_on": sisa_pln_on, "tot_on": total_opex_on, "sav_on": hemat_opex_on,
-        "vendor_off": bayar_vendor_off, "sisa_off": 0, "tot_off": total_opex_off, "sav_off": hemat_opex_off,
-        "vendor_hyb": bayar_vendor_hyb, "sisa_hyb": sisa_pln_hyb, "tot_hyb": total_opex_hyb, "sav_hyb": hemat_opex_hyb
-    }
-
-res = calculate()
-
-# --- CSS KHUSUS UNTUK MEMAKSA WARNA HITAM/GELAP DI BANNER ---
-st.markdown(f"""
-<style>
-    .banner {{
-        background-color: #e8f5e9; 
-        padding: 20px; 
-        border-radius: 10px; 
-        border: 1px solid #c8e6c9;
-        text-align: center;
-        margin-bottom: 25px;
-    }}
-    /* Paksa warna teks jadi hijau gelap agar terbaca di Dark Mode */
-    .banner h4 {{
-        color: #2e7d32 !important; 
-        margin-bottom: 5px;
-        font-weight: 600;
-    }}
-    .banner h2 {{
-        color: #1b5e20 !important;
-        margin: 0;
-        font-weight: 800;
-    }}
-    .banner p {{
-        color: #388e3c !important;
-        font-weight: bold;
-        margin-top: 5px;
-        font-size: 1.1em;
-    }}
-    
-    .highlight {{ font-weight: bold; font-size: 1.2rem; }}
-    .green {{ color: #2e7d32; }}
-    .red {{ color: #d32f2f; }}
-    .blue {{ color: #1565c0; }}
-</style>
-
-<div class="banner">
-    <h4>Tagihan PLN Saat Ini (Baseline)</h4>
-    <h2>Rp {res['pln_bln']:,.0f} / Bulan</h2>
-    <p>⚡ Beban Listrik: {res['daya_harian']:.1f} kWh / Hari</p>
-</div>
-""", unsafe_allow_html=True)
-
-col1, col2, col3 = st.columns(3)
-
-# --- KOLOM 1: ON GRID ---
-with col1:
-    st.markdown("### 🏙️ ON-GRID")
-    st.info("Hemat Siang Saja (No Baterai)")
-    
-    st.markdown(f"""
-    **1. FISIK**
-    * Panel: {res['panel_qty']} Pcs ({wp_panel}Wp)
-    * Area: {res['area']:.1f} m²
-    * Baterai: 0 Unit
-    
-    ---
-    **2. CAPEX (Beli Alat)**
-    * Modal: **Rp {res['capex_on']:,.0f}**
-    * BEP: <span class='blue highlight'>{res['bep_on']:.1f} Tahun</span>
-    
-    ---
-    **3. OPEX (Sewa Alat)**
-    * Setor Vendor: Rp {res['vendor_on']:,.0f}
-    * Sisa PLN: Rp {res['sisa_on']:,.0f}
-    * **Total Keluar: Rp {res['tot_on']:,.0f}**
-    * Hemat: <span class='green highlight'>Rp {res['sav_on']:,.0f}</span>
-    """, unsafe_allow_html=True)
-
-# --- KOLOM 2: OFF GRID ---
-with col2:
-    st.markdown("### 🔋 OFF-GRID")
-    st.error("Mandiri Total (Putus PLN)")
-    
-    st.markdown(f"""
-    **1. FISIK**
-    * Panel: {res['panel_qty']} Pcs
-    * Area: {res['area']:.1f} m²
-    * Baterai: {res['batt_off']} Unit
-    
-    ---
-    **2. CAPEX (Beli Alat)**
-    * Modal: **Rp {res['capex_off']:,.0f}**
-    * BEP: <span class='blue highlight'>{res['bep_off']:.1f} Tahun</span>
-    
-    ---
-    **3. OPEX (Sewa Alat)**
-    * Setor Vendor: Rp {res['vendor_off']:,.0f}
-    * Sisa PLN: Rp 0
-    * **Total Keluar: Rp {res['tot_off']:,.0f}**
-    * Hemat: <span class='green highlight'>Rp {res['sav_off']:,.0f}</span>
-    """, unsafe_allow_html=True)
-
-# --- KOLOM 3: HYBRID ---
-with col3:
-    st.markdown("### ⚡ HYBRID")
-    st.success("Stabil & Aman (Recommended)")
-    
-    st.markdown(f"""
-    **1. FISIK**
-    * Panel: {res['panel_qty']} Pcs
-    * Area: {res['area']:.1f} m²
-    * Baterai: {res['batt_hyb']} Unit
-    
-    ---
-    **2. CAPEX (Beli Alat)**
-    * Modal: **Rp {res['capex_hyb']:,.0f}**
-    * BEP: <span class='blue highlight'>{res['bep_hyb']:.1f} Tahun</span>
-    
-    ---
-    **3. OPEX (Sewa Alat)**
-    * Setor Vendor: Rp {res['vendor_hyb']:,.0f}
-    * Sisa PLN: Rp {res['sisa_hyb']:,.0f}
-    * **Total Keluar: Rp {res['tot_hyb']:,.0f}**
-    * Hemat: <span class='green highlight'>Rp {res['sav_hyb']:,.0f}</span>
-    """, unsafe_allow_html=True)
+    hemat_opex_
