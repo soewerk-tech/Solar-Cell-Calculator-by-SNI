@@ -94,4 +94,133 @@ def calculate():
     bayar_vendor_hyb = (daya_bulanan * 0.9) * tarif_sewa
     sisa_pln_hyb = (daya_bulanan * 0.1) * tarif_pln
     total_opex_hyb = bayar_vendor_hyb + sisa_pln_hyb
-    hemat_opex_
+    hemat_opex_hyb = biaya_pln_bulanan - total_opex_hyb
+    
+    return {
+        "pln_bln": biaya_pln_bulanan,
+        "daya_harian": daya_harian,
+        "panel_qty": jumlah_panel, "area": total_luas,
+        "batt_off": qty_batt_off, "batt_hyb": qty_batt_hyb,
+        "capex_on": capex_on, "capex_off": capex_off, "capex_hyb": capex_hyb,
+        "bep_on": bep_on, "bep_off": bep_off, "bep_hyb": bep_hyb,
+        "vendor_on": bayar_vendor_on, "sisa_on": sisa_pln_on, "tot_on": total_opex_on, "sav_on": hemat_opex_on,
+        "vendor_off": bayar_vendor_off, "sisa_off": 0, "tot_off": total_opex_off, "sav_off": hemat_opex_off,
+        "vendor_hyb": bayar_vendor_hyb, "sisa_hyb": sisa_pln_hyb, "tot_hyb": total_opex_hyb, "sav_hyb": hemat_opex_hyb
+    }
+
+res = calculate()
+
+# --- CSS STYLING (AGAR JELAS DI MODE GELAP) ---
+st.markdown(f"""
+<style>
+    .banner {{
+        background-color: #e8f5e9; 
+        padding: 20px; 
+        border-radius: 10px; 
+        border: 1px solid #c8e6c9;
+        text-align: center;
+        margin-bottom: 25px;
+    }}
+    .banner h4 {{
+        color: #2e7d32 !important; 
+        margin-bottom: 5px;
+        font-weight: 600;
+    }}
+    .banner h2 {{
+        color: #1b5e20 !important;
+        margin: 0;
+        font-weight: 800;
+        font-size: 2em;
+    }}
+    .banner p {{
+        color: #388e3c !important;
+        font-weight: bold;
+        margin-top: 5px;
+        font-size: 1.1em;
+    }}
+    
+    .highlight {{ font-weight: bold; font-size: 1.1rem; }}
+    .green {{ color: #2e7d32; }}
+    .blue {{ color: #1565c0; }}
+</style>
+
+<div class="banner">
+    <h4>Tagihan Listrik Saat Ini (Baseline)</h4>
+    <h2>Rp {res['pln_bln']:,.0f} / Bulan</h2>
+    <p>⚡ Beban Energi: {res['daya_harian']:.1f} kWh / Hari</p>
+</div>
+""", unsafe_allow_html=True)
+
+col1, col2, col3 = st.columns(3)
+
+# --- KOLOM 1: ON GRID ---
+with col1:
+    st.markdown("### 🏙️ ON-GRID")
+    st.info("Koneksi Jaringan (Tanpa Baterai)")
+    
+    st.markdown(f"""
+    **1. KEBUTUHAN FISIK**
+    * Panel: {res['panel_qty']} Unit ({wp_panel}Wp)
+    * Luas Atap: {res['area']:.1f} m²
+    * Baterai: Tidak Ada
+    
+    ---
+    **2. BELI ALAT (CAPEX)**
+    * Investasi: **Rp {res['capex_on']:,.0f}**
+    * Balik Modal: <span class='blue highlight'>{res['bep_on']:.1f} Tahun</span>
+    
+    ---
+    **3. SEWA ALAT (OPEX)**
+    * Bayar Vendor: Rp {res['vendor_on']:,.0f}
+    * Sisa PLN: Rp {res['sisa_on']:,.0f}
+    * **Total Keluar: Rp {res['tot_on']:,.0f}**
+    * Hemat: <span class='green highlight'>Rp {res['sav_on']:,.0f}</span>
+    """, unsafe_allow_html=True)
+
+# --- KOLOM 2: OFF GRID ---
+with col2:
+    st.markdown("### 🔋 OFF-GRID")
+    st.error("Sistem Mandiri (Lepas Jaringan)")
+    
+    st.markdown(f"""
+    **1. KEBUTUHAN FISIK**
+    * Panel: {res['panel_qty']} Unit
+    * Luas Atap: {res['area']:.1f} m²
+    * Baterai: {res['batt_off']} Unit
+    
+    ---
+    **2. BELI ALAT (CAPEX)**
+    * Investasi: **Rp {res['capex_off']:,.0f}**
+    * Balik Modal: <span class='blue highlight'>{res['bep_off']:.1f} Tahun</span>
+    
+    ---
+    **3. SEWA ALAT (OPEX)**
+    * Bayar Vendor: Rp {res['vendor_off']:,.0f}
+    * Sisa PLN: Rp 0
+    * **Total Keluar: Rp {res['tot_off']:,.0f}**
+    * Hemat: <span class='green highlight'>Rp {res['sav_off']:,.0f}</span>
+    """, unsafe_allow_html=True)
+
+# --- KOLOM 3: HYBRID ---
+with col3:
+    st.markdown("### ⚡ HYBRID")
+    st.success("Kombinasi (Aman & Stabil)")
+    
+    st.markdown(f"""
+    **1. KEBUTUHAN FISIK**
+    * Panel: {res['panel_qty']} Unit
+    * Luas Atap: {res['area']:.1f} m²
+    * Baterai: {res['batt_hyb']} Unit (Backup)
+    
+    ---
+    **2. BELI ALAT (CAPEX)**
+    * Investasi: **Rp {res['capex_hyb']:,.0f}**
+    * Balik Modal: <span class='blue highlight'>{res['bep_hyb']:.1f} Tahun</span>
+    
+    ---
+    **3. SEWA ALAT (OPEX)**
+    * Bayar Vendor: Rp {res['vendor_hyb']:,.0f}
+    * Sisa PLN: Rp {res['sisa_hyb']:,.0f}
+    * **Total Keluar: Rp {res['tot_hyb']:,.0f}**
+    * Hemat: <span class='green highlight'>Rp {res['sav_hyb']:,.0f}</span>
+    """, unsafe_allow_html=True)
