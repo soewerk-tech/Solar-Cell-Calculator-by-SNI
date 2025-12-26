@@ -71,6 +71,14 @@ def calculate():
     capex_off = base_capex + (qty_batt_off * price_batt) + 25000000
     capex_hyb = base_capex + (qty_batt_hyb * price_batt) + 30000000
     
+    # HITUNGAN MODAL PER KWH (LCOE Simplified - 20 Tahun)
+    # Total produksi listrik sistem selama 20 tahun (asumsi umur panel)
+    lifetime_gen_kwh = (jumlah_panel * panel_capacity_kw) * psh * 365 * 20
+    
+    per_kwh_on = capex_on / lifetime_gen_kwh
+    per_kwh_off = capex_off / lifetime_gen_kwh
+    per_kwh_hyb = capex_hyb / lifetime_gen_kwh
+
     # BEP & OPEX
     hemat_on_bln = biaya_pln_bulanan * 0.4
     bep_on = capex_on / (hemat_on_bln * 12) if hemat_on_bln > 0 else 0
@@ -89,6 +97,7 @@ def calculate():
         "panel_qty": jumlah_panel, "area": total_luas,
         "batt_off": qty_batt_off, "batt_hyb": qty_batt_hyb,
         "capex_on": capex_on, "capex_off": capex_off, "capex_hyb": capex_hyb,
+        "per_kwh_on": per_kwh_on, "per_kwh_off": per_kwh_off, "per_kwh_hyb": per_kwh_hyb, # <-- NEW DATA
         "bep_on": bep_on, "bep_off": bep_off, "bep_hyb": bep_hyb,
         "vendor_on": (daya_bulanan * 0.4) * tarif_sewa, 
         "sisa_on": (daya_bulanan * 0.6) * tarif_pln,
@@ -100,7 +109,7 @@ def calculate():
 # --- 5. TAMPILAN CARD UI (RENDER) ---
 res = calculate()
 
-# CSS STYLE (Layout Kartu & Warna)
+# CSS STYLE
 st.markdown("""
 <style>
     .banner-box {
@@ -179,6 +188,7 @@ with col1:
 <div class="divider"></div>
 <div class="sec-head">2. Beli Sendiri (CAPEX)</div>
 <div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_on']:,.0f}</span></div>
+<div class="row-item"><span>Modal per kWh (20 Thn):</span><span class="val-blue">Rp {res['per_kwh_on']:,.0f} /kWh</span></div>
 <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_on']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Sewa Alat (OPEX)</div>
@@ -203,6 +213,7 @@ with col2:
 <div class="divider"></div>
 <div class="sec-head">2. Beli Sendiri (CAPEX)</div>
 <div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_off']:,.0f}</span></div>
+<div class="row-item"><span>Modal per kWh (20 Thn):</span><span class="val-blue">Rp {res['per_kwh_off']:,.0f} /kWh</span></div>
 <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_off']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Sewa Alat (OPEX)</div>
@@ -227,6 +238,7 @@ with col3:
 <div class="divider"></div>
 <div class="sec-head">2. Beli Sendiri (CAPEX)</div>
 <div class="row-item"><span>Modal Awal:</span><span class="val-bold">Rp {res['capex_hyb']:,.0f}</span></div>
+<div class="row-item"><span>Modal per kWh (20 Thn):</span><span class="val-blue">Rp {res['per_kwh_hyb']:,.0f} /kWh</span></div>
 <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Sewa Alat (OPEX)</div>
