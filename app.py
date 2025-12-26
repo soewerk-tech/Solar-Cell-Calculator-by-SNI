@@ -98,6 +98,7 @@ def calculate():
     
     return {
         "pln_bln": biaya_pln_bulanan,
+        "daya_harian": daya_harian, # <-- DATA BARU DITAMBAHKAN
         "panel_qty": jumlah_panel, "area": total_luas,
         "batt_off": qty_batt_off, "batt_hyb": qty_batt_hyb,
         "capex_on": capex_on, "capex_off": capex_off, "capex_hyb": capex_hyb,
@@ -109,18 +110,45 @@ def calculate():
 
 res = calculate()
 
-# --- TAMPILAN UTAMA (CSS STYLING) ---
+# --- CSS KHUSUS UNTUK MEMAKSA WARNA HITAM/GELAP DI BANNER ---
 st.markdown(f"""
 <style>
-    .metric-card {{ background-color: #f0f2f6; border-radius: 10px; padding: 15px; margin-bottom: 10px; border: 1px solid #ddd; }}
+    .banner {{
+        background-color: #e8f5e9; 
+        padding: 20px; 
+        border-radius: 10px; 
+        border: 1px solid #c8e6c9;
+        text-align: center;
+        margin-bottom: 25px;
+    }}
+    /* Paksa warna teks jadi hijau gelap agar terbaca di Dark Mode */
+    .banner h4 {{
+        color: #2e7d32 !important; 
+        margin-bottom: 5px;
+        font-weight: 600;
+    }}
+    .banner h2 {{
+        color: #1b5e20 !important;
+        margin: 0;
+        font-weight: 800;
+    }}
+    .banner p {{
+        color: #388e3c !important;
+        font-weight: bold;
+        margin-top: 5px;
+        font-size: 1.1em;
+    }}
+    
     .highlight {{ font-weight: bold; font-size: 1.2rem; }}
     .green {{ color: #2e7d32; }}
     .red {{ color: #d32f2f; }}
     .blue {{ color: #1565c0; }}
 </style>
-<div style="text-align:center; padding: 10px; background-color: #e8f5e9; border-radius: 10px; margin-bottom: 20px;">
+
+<div class="banner">
     <h4>Tagihan PLN Saat Ini (Baseline)</h4>
-    <h2 style="color: #2e7d32;">Rp {res['pln_bln']:,.0f} / Bulan</h2>
+    <h2>Rp {res['pln_bln']:,.0f} / Bulan</h2>
+    <p>⚡ Beban Listrik: {res['daya_harian']:.1f} kWh / Hari</p>
 </div>
 """, unsafe_allow_html=True)
 
