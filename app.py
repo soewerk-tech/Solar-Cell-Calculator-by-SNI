@@ -100,7 +100,7 @@ def calculate():
 # --- 5. TAMPILAN CARD UI (RENDER) ---
 res = calculate()
 
-# CSS STYLE (Sama seperti sebelumnya)
+# CSS STYLE (Layout Kartu & Warna)
 st.markdown("""
 <style>
     .banner-box {
@@ -153,7 +153,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# BANNER
+# BANNER HEADLINE
 st.markdown(f"""
 <div class="banner-box">
 <h4 style="margin:0; opacity:0.8;">Tagihan Listrik Saat Ini (Baseline)</h4>
@@ -166,7 +166,7 @@ st.markdown(f"""
 
 col1, col2, col3 = st.columns(3)
 
-# PERBAIKAN: Menghapus spasi (indentasi) pada string HTML agar tidak dianggap code block
+# KOLOM 1: ON GRID
 with col1:
     st.markdown(f"""
 <div class="card card-blue">
@@ -182,7 +182,7 @@ with col1:
 <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_on']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Sewa Alat (OPEX)</div>
-<div class="row-item"><span>Bayar Vendor:</span><span>Rp {res['vendor_on']:,.0f}</span></div>
+<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_on']:,.0f}</span></div>
 <div class="row-item"><span>Sisa PLN:</span><span>Rp {res['sisa_on']:,.0f}</span></div>
 <div class="row-item" style="margin-top:5px; background:#e3f2fd; padding:5px; border-radius:5px;">
 <span>Total:</span><span class="val-blue">Rp {(res['vendor_on']+res['sisa_on']):,.0f}</span>
@@ -190,6 +190,7 @@ with col1:
 </div>
 """, unsafe_allow_html=True)
 
+# KOLOM 2: OFF GRID
 with col2:
     st.markdown(f"""
 <div class="card card-red">
@@ -205,7 +206,7 @@ with col2:
 <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_off']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Sewa Alat (OPEX)</div>
-<div class="row-item"><span>Bayar Vendor:</span><span>Rp {res['vendor_off']:,.0f}</span></div>
+<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_off']:,.0f}</span></div>
 <div class="row-item"><span>Sisa PLN:</span><span>Rp 0</span></div>
 <div class="row-item" style="margin-top:5px; background:#ffebee; padding:5px; border-radius:5px;">
 <span>Total:</span><span class="val-blue">Rp {res['vendor_off']:,.0f}</span>
@@ -213,6 +214,7 @@ with col2:
 </div>
 """, unsafe_allow_html=True)
 
+# KOLOM 3: HYBRID
 with col3:
     st.markdown(f"""
 <div class="card card-green">
@@ -228,7 +230,7 @@ with col3:
 <div class="row-item"><span>Balik Modal:</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Sewa Alat (OPEX)</div>
-<div class="row-item"><span>Bayar Vendor:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
+<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
 <div class="row-item"><span>Sisa PLN:</span><span>Rp {res['sisa_hyb']:,.0f}</span></div>
 <div class="row-item" style="margin-top:5px; background:#e8f5e9; padding:5px; border-radius:5px;">
 <span>Total:</span><span class="val-green">Rp {(res['vendor_hyb']+res['sisa_hyb']):,.0f}</span>
