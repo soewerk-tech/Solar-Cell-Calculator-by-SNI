@@ -243,6 +243,7 @@ with col1:
         <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
         <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
         <div class="row-item"><span>Kebutuhan Area:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
+        
         <div class="divider"></div>
         <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
         <div class="row-item"><span>Total Investasi:</span><span class="val-bold">Rp {res['capex_on']:,.0f}</span></div>
@@ -265,7 +266,9 @@ with col2:
         <div class="sec-head">1. Kebutuhan Perangkat</div>
         <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
         <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
+        <div class="row-item"><span>Kebutuhan Area:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
         <div class="row-item"><span>Bank Baterai:</span><span class="val-bold">{res['batt_off']} Unit</span></div>
+        
         <div class="divider"></div>
         <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
         <div class="row-item"><span>Total Investasi:</span><span class="val-bold">Rp {res['capex_off']:,.0f}</span></div>
@@ -289,7 +292,9 @@ with col3:
         <div class="sec-head">1. Kebutuhan Perangkat</div>
         <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
         <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
+        <div class="row-item"><span>Kebutuhan Area:</span><span class="val-bold">{res['area']:.1f} m²</span></div>
         <div class="row-item"><span>Bank Baterai:</span><span class="val-bold">{res['batt_hyb']} Unit</span></div>
+        
         <div class="divider"></div>
         <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
         <div class="row-item"><span>Total Investasi:</span><span class="val-bold">Rp {res['capex_hyb']:,.0f}</span></div>
