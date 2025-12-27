@@ -22,7 +22,6 @@ def render_header():
         if logo_file:
             st.image(logo_file, width=220)
         else:
-            # Fallback: cari file gambar apapun jika nama tidak sesuai
             files = [f for f in os.listdir('.') if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
             if files:
                 st.image(files[0], width=220)
@@ -60,11 +59,22 @@ with st.sidebar:
         batt_v = st.number_input("Voltase Baterai (V)", value=48, step=12)
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
 
-    with st.expander("C. Asumsi Finansial"):
-        price_panel = st.number_input("Biaya EPC/kWp (Rp)", value=14000000, step=500000)
-        price_batt = st.number_input("Harga Baterai/Unit (Rp)", value=16000000, step=500000)
-        # Variable Aftersales DIHAPUS
-        opex_discount = st.number_input("Diskon Tarif PPA/Sewa (%)", value=10, step=1)
+    # --- BAGIAN INI SUDAH DIPISAH SESUAI REQUEST ---
+    with st.expander("C. Asumsi Biaya (CAPEX)", expanded=True):
+        st.markdown("### 💰 Instalasi per kWp")
+        st.caption("Biaya termasuk Inverter, Kabel, Mounting, & Jasa (Diluar Baterai)")
+        
+        price_kwp_on = st.number_input("Biaya On-Grid / kWp", value=12000000, step=500000)
+        price_kwp_off = st.number_input("Biaya Off-Grid / kWp", value=16000000, step=500000)
+        price_kwp_hyb = st.number_input("Biaya Hybrid / kWp", value=14000000, step=500000)
+        
+        st.markdown("---")
+        st.markdown("### 🔋 Komponen Baterai")
+        price_batt = st.number_input("Harga Baterai / Unit", value=16000000, step=500000)
+        
+        st.markdown("---")
+        st.markdown("### 📉 Diskon Sewa")
+        opex_discount = st.number_input("Diskon Tarif PPA (%)", value=10, step=1)
 
 # --- 4. STYLE & BANNER ---
 st.markdown("""
@@ -108,7 +118,6 @@ col1, col2, col3 = st.columns(3)
 
 # --- 5. INTERFACE INPUT (SLIDER) DI DALAM CARD ---
 
-# === COL 1: ON GRID ===
 with col1:
     st.markdown("""
     <div class="card-top blue-top">
@@ -117,13 +126,10 @@ with col1:
     </div>
     <div class="card-mid">
     """, unsafe_allow_html=True)
-    
-    # SLIDER ON-GRID (0-40%)
     target_on = st.slider("Target Penghematan (%)", 0, 40, 40, key="slider_on")
     st.caption("Maksimal 40% (Permen ESDM No. 2/2024)")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# === COL 2: OFF GRID ===
 with col2:
     st.markdown("""
     <div class="card-top red-top">
@@ -132,15 +138,12 @@ with col2:
     </div>
     <div class="card-mid">
     """, unsafe_allow_html=True)
-    
-    # OFF GRID FIXED 100%
     st.markdown("**Target Penghematan: 100%**")
     st.progress(100)
     st.caption("Sistem mandiri lepas total dari PLN")
     target_off = 100
     st.markdown('</div>', unsafe_allow_html=True)
 
-# === COL 3: HYBRID ===
 with col3:
     st.markdown("""
     <div class="card-top green-top">
@@ -149,14 +152,12 @@ with col3:
     </div>
     <div class="card-mid">
     """, unsafe_allow_html=True)
-    
-    # SLIDER HYBRID (0-100%)
     target_hyb = st.slider("Target Penghematan (%)", 0, 100, 90, key="slider_hyb")
     st.caption("Atur proporsi penggunaan PLTS vs PLN")
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-# --- 6. LOGIKA HITUNGAN ---
+# --- 6. LOGIKA HITUNGAN (DIPERBARUI) ---
 def calculate_final(eff_on, eff_off, eff_hyb):
     real_loss = loss_factor / 100
     daya_harian = daya_jam * jam_ops
@@ -176,29 +177,39 @@ def calculate_final(eff_on, eff_off, eff_hyb):
     batt_kwh = (batt_v * batt_ah) / 1000
     dod = 0.8
     
-    # Baterai
+    # Kebutuhan Baterai
     qty_batt_on = 0
     qty_batt_off = math.ceil(daya_harian / (batt_kwh * dod))
     
-    # Logic Baterai Hybrid (Sesuai Slider)
     if eff_hyb > 0:
         kebutuhan_backup = daya_harian * (eff_hyb / 100)
         qty_batt_hyb = math.ceil(kebutuhan_backup / (batt_kwh * dod))
     else:
         qty_batt_hyb = 0
 
-    # CAPEX
-    base_capex = kwp_needed * price_panel
-    capex_on = base_capex + 10000000
-    capex_off = base_capex + (qty_batt_off * price_batt) + 25000000
-    capex_hyb = base_capex + (qty_batt_hyb * price_batt) + 30000000
+    # === CAPEX CALCULATION (MENGGUNAKAN HARGA TERPISAH) ===
+    
+    # 1. Biaya Instalasi Dasar (Panel + Inverter + Mounting + Jasa)
+    #    Dihitung: Kapasitas Total (kWp) x Harga per kWp masing-masing sistem
+    base_capex_on = kwp_needed * price_kwp_on
+    base_capex_off = kwp_needed * price_kwp_off
+    base_capex_hyb = kwp_needed * price_kwp_hyb
+    
+    # 2. Biaya Baterai
+    cost_batt_off = qty_batt_off * price_batt
+    cost_batt_hyb = qty_batt_hyb * price_batt
+    
+    # 3. CAPEX TOTAL (Instalasi + Baterai + Fixed Cost Lainnya)
+    capex_on = base_capex_on + 10000000 
+    capex_off = base_capex_off + cost_batt_off + 25000000
+    capex_hyb = base_capex_hyb + cost_batt_hyb + 30000000
     
     # Unit Cost
     unit_cost_on = capex_on / total_kapasitas_kwp
     unit_cost_off = capex_off / total_kapasitas_kwp
     unit_cost_hyb = capex_hyb / total_kapasitas_kwp
 
-    # Penghematan (Gross = Net karena Maintenance dihapus)
+    # Penghematan (Gross = Net)
     hemat_thn_on = biaya_pln_tahunan * (eff_on / 100)
     hemat_thn_off = biaya_pln_tahunan * (eff_off / 100)
     hemat_thn_hyb = biaya_pln_tahunan * (eff_hyb / 100)
@@ -214,6 +225,7 @@ def calculate_final(eff_on, eff_off, eff_hyb):
     return {
         "panel_qty": jumlah_panel, "kwp_total": total_kapasitas_kwp, "area": total_luas,
         "batt_off": qty_batt_off, "batt_hyb": qty_batt_hyb,
+        "cost_batt_off": cost_batt_off, "cost_batt_hyb": cost_batt_hyb,
         "capex_on": capex_on, "capex_off": capex_off, "capex_hyb": capex_hyb,
         "unit_on": unit_cost_on, "unit_off": unit_cost_off, "unit_hyb": unit_cost_hyb,
         "bep_on": bep_on, "bep_off": bep_off, "bep_hyb": bep_hyb,
@@ -257,11 +269,11 @@ with col2:
     <div class="card-bot">
         <div class="sec-head">1. Kebutuhan Perangkat</div>
         <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
-        <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
         <div class="row-item"><span>Bank Baterai:</span><span class="val-bold">{res['batt_off']} Unit</span></div>
         <div class="divider"></div>
         <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
         <div class="row-item"><span>Total Investasi:</span><span class="val-bold">Rp {res['capex_off']:,.0f}</span></div>
+        <div class="row-item" style="color:#555;"><span>Biaya Baterai:</span><span>Rp {res['cost_batt_off']:,.0f}</span></div>
         <div class="row-item"><span>Biaya per kWp:</span><span class="val-blue">Rp {res['unit_off']/1000000:.1f} Juta</span></div>
         <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_off']:.1f} Tahun</span></div>
         <div class="divider"></div>
@@ -280,11 +292,11 @@ with col3:
     <div class="card-bot">
         <div class="sec-head">1. Kebutuhan Perangkat</div>
         <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
-        <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
         <div class="row-item"><span>Bank Baterai:</span><span class="val-bold">{res['batt_hyb']} Unit</span></div>
         <div class="divider"></div>
         <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
         <div class="row-item"><span>Total Investasi:</span><span class="val-bold">Rp {res['capex_hyb']:,.0f}</span></div>
+        <div class="row-item" style="color:#555;"><span>Biaya Baterai:</span><span>Rp {res['cost_batt_hyb']:,.0f}</span></div>
         <div class="row-item"><span>Biaya per kWp:</span><span class="val-blue">Rp {res['unit_hyb']/1000000:.1f} Juta</span></div>
         <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
         <div class="divider"></div>
