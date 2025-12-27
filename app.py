@@ -9,16 +9,29 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. LOGO & JUDUL ---
-# Pastikan nama file di GitHub adalah 'logo.png' (huruf kecil semua)
-if os.path.exists("logo.png"):
-    st.image("logo.png", width=300)
-elif os.path.exists("LOGO HORIZONTAL.png"): # Cek nama alternatif
-    st.image("LOGO HORIZONTAL.png", width=300)
+# --- 2. LOGIKA PENCARIAN LOGO CERDAS ---
+# Kita buat fungsi untuk mencari logo dengan berbagai kemungkinan nama
+def find_logo():
+    # Daftar kemungkinan nama file (agar lebih fleksibel)
+    possible_names = [
+        "logo.png", "LOGO.png", "Logo.png",
+        "LOGO HORIZONTAL.png", "logo horizontal.png",
+        "logo.jpg", "LOGO.jpg"
+    ]
+    
+    for name in possible_names:
+        if os.path.exists(name):
+            return name # Kembalikan nama yang ketemu
+    return None
+
+found_logo = find_logo()
+
+if found_logo:
+    st.image(found_logo, width=300)
 else:
-    # Pesan Error jika logo tidak ketemu
-    st.warning("⚠️ Logo tidak muncul? Pastikan nama file di GitHub adalah 'logo.png' (huruf kecil semua).")
+    # Header Teks jika logo tidak ketemu
     st.markdown("### SOLUSI NETWORK INDONESIA")
+    st.info("ℹ️ Logo belum muncul? Cek 'File Checker' di Sidebar bawah.")
 
 st.title("☀️ Kalkulator Studi Kelayakan PLTS")
 st.markdown("""
@@ -51,9 +64,9 @@ with st.sidebar:
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
 
     with st.expander("C. Target & Asumsi Finansial", expanded=True):
-        # SLIDER HYBRID (FITUR REQUEST)
+        # SLIDER HYBRID (DINAMIS 0-100%)
         st.markdown("**Target Efisiensi:**")
-        target_eff_hyb = st.slider("Target Hybrid System (%)", min_value=50, max_value=100, value=90, step=5, help="Persentase kebutuhan energi yang akan disuplai oleh PLTS Hybrid")
+        target_eff_hyb = st.slider("Target Hybrid System (%)", min_value=0, max_value=100, value=90, step=5, help="Persentase kebutuhan energi yang akan disuplai oleh PLTS Hybrid")
         
         st.markdown("---")
         st.markdown("**Asumsi Biaya:**")
@@ -63,6 +76,18 @@ with st.sidebar:
         price_aftersales = st.number_input("Biaya Pemeliharaan (O&M)/Thn", value=2500000, step=100000, help="Biaya maintenance rutin tahunan per lokasi.")
         
         opex_discount = st.number_input("Diskon Tarif PPA/Sewa (%)", value=10, step=1)
+    
+    # --- FITUR DEBUG (FILE CHECKER) ---
+    st.markdown("---")
+    with st.expander("🔍 System & File Checker"):
+        st.caption("Gunakan ini untuk mengecek nama file logo yang terbaca server.")
+        files = os.listdir('.')
+        image_files = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg'))]
+        if image_files:
+            st.success(f"File Gambar Ditemukan: {image_files}")
+            st.caption("Pastikan nama di atas SAMA PERSIS dengan kode (logo.png).")
+        else:
+            st.error("Tidak ada file gambar (.png/.jpg) ditemukan di server.")
 
 # --- 4. LOGIKA HITUNGAN ---
 def calculate():
@@ -85,7 +110,8 @@ def calculate():
     batt_kwh = (batt_v * batt_ah) / 1000
     dod = 0.8
     qty_batt_off = math.ceil(daya_harian / (batt_kwh * dod))
-    qty_batt_hyb = math.ceil((daya_harian * 0.5) / (batt_kwh * dod))
+    qty_batt_hyb = math.ceil((daya_harian * (target_eff_hyb/100)) / (batt_kwh * dod)) 
+    # Logic Baterai Hybrid disesuaikan dengan target slider
     
     # CAPEX Total
     base_capex = kwp_needed * price_panel
