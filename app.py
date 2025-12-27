@@ -56,10 +56,12 @@ with st.sidebar:
         p_len = st.number_input("Panjang Panel (m)", value=2.3, step=0.1)
         p_wid = st.number_input("Lebar Panel (m)", value=1.1, step=0.1)
         st.markdown("---")
+        st.markdown("### 🔋 Spesifikasi Baterai")
         batt_v = st.number_input("Voltase Baterai (V)", value=48, step=12)
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
+        # INPUT BARU: DoD
+        batt_dod = st.number_input("Efisiensi Pemakaian (DoD) %", value=80, step=5, help="Lead Acid/Aki ~50%, Lithium ~80-90%")
 
-    # --- BAGIAN INI SUDAH DIPISAH SESUAI REQUEST ---
     with st.expander("C. Asumsi Biaya (CAPEX)", expanded=True):
         st.markdown("### 💰 Instalasi per kWp")
         st.caption("Biaya termasuk Inverter, Kabel, Mounting, & Jasa (Diluar Baterai)")
@@ -69,7 +71,7 @@ with st.sidebar:
         price_kwp_hyb = st.number_input("Biaya Hybrid / kWp", value=14000000, step=500000)
         
         st.markdown("---")
-        st.markdown("### 🔋 Komponen Baterai")
+        st.markdown("### 🔋 Harga Komponen Baterai")
         price_batt = st.number_input("Harga Baterai / Unit", value=16000000, step=500000)
         
         st.markdown("---")
@@ -157,7 +159,7 @@ with col3:
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-# --- 6. LOGIKA HITUNGAN (DIPERBARUI) ---
+# --- 6. LOGIKA HITUNGAN ---
 def calculate_final(eff_on, eff_off, eff_hyb):
     real_loss = loss_factor / 100
     daya_harian = daya_jam * jam_ops
@@ -175,31 +177,28 @@ def calculate_final(eff_on, eff_off, eff_hyb):
     total_luas = jumlah_panel * (p_len * p_wid)
     
     batt_kwh = (batt_v * batt_ah) / 1000
-    dod = 0.8
+    
+    # --- LOGIKA BATERAI BARU (DENGAN VARIABLE DoD) ---
+    real_dod = batt_dod / 100 # Konversi ke desimal (misal 80% jadi 0.8)
     
     # Kebutuhan Baterai
     qty_batt_on = 0
-    qty_batt_off = math.ceil(daya_harian / (batt_kwh * dod))
+    qty_batt_off = math.ceil(daya_harian / (batt_kwh * real_dod))
     
     if eff_hyb > 0:
         kebutuhan_backup = daya_harian * (eff_hyb / 100)
-        qty_batt_hyb = math.ceil(kebutuhan_backup / (batt_kwh * dod))
+        qty_batt_hyb = math.ceil(kebutuhan_backup / (batt_kwh * real_dod))
     else:
         qty_batt_hyb = 0
 
-    # === CAPEX CALCULATION (MENGGUNAKAN HARGA TERPISAH) ===
-    
-    # 1. Biaya Instalasi Dasar (Panel + Inverter + Mounting + Jasa)
-    #    Dihitung: Kapasitas Total (kWp) x Harga per kWp masing-masing sistem
+    # === CAPEX CALCULATION ===
     base_capex_on = kwp_needed * price_kwp_on
     base_capex_off = kwp_needed * price_kwp_off
     base_capex_hyb = kwp_needed * price_kwp_hyb
     
-    # 2. Biaya Baterai
     cost_batt_off = qty_batt_off * price_batt
     cost_batt_hyb = qty_batt_hyb * price_batt
     
-    # 3. CAPEX TOTAL (Instalasi + Baterai + Fixed Cost Lainnya)
     capex_on = base_capex_on + 10000000 
     capex_off = base_capex_off + cost_batt_off + 25000000
     capex_hyb = base_capex_hyb + cost_batt_hyb + 30000000
@@ -209,12 +208,12 @@ def calculate_final(eff_on, eff_off, eff_hyb):
     unit_cost_off = capex_off / total_kapasitas_kwp
     unit_cost_hyb = capex_hyb / total_kapasitas_kwp
 
-    # Penghematan (Gross = Net)
+    # Penghematan
     hemat_thn_on = biaya_pln_tahunan * (eff_on / 100)
     hemat_thn_off = biaya_pln_tahunan * (eff_off / 100)
     hemat_thn_hyb = biaya_pln_tahunan * (eff_hyb / 100)
 
-    # BEP (Investasi / Penghematan)
+    # BEP
     bep_on = capex_on / hemat_thn_on if hemat_thn_on > 0 else 0
     bep_off = capex_off / hemat_thn_off if hemat_thn_off > 0 else 0
     bep_hyb = capex_hyb / hemat_thn_hyb if hemat_thn_hyb > 0 else 0
