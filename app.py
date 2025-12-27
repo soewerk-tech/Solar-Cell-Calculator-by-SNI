@@ -59,8 +59,7 @@ with st.sidebar:
         st.markdown("### 🔋 Spesifikasi Baterai")
         batt_v = st.number_input("Voltase Baterai (V)", value=48, step=12)
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
-        # INPUT BARU: DoD
-        batt_dod = st.number_input("Efisiensi Pemakaian (DoD) %", value=80, step=5, help="Lead Acid/Aki ~50%, Lithium ~80-90%")
+        batt_dod = st.number_input("Efisiensi Pemakaian (DoD) %", value=80, step=5, help="Lead Acid ~50%, Lithium ~80-90%")
 
     with st.expander("C. Asumsi Biaya (CAPEX)", expanded=True):
         st.markdown("### 💰 Instalasi per kWp")
@@ -118,8 +117,7 @@ st.markdown(f"""
 
 col1, col2, col3 = st.columns(3)
 
-# --- 5. INTERFACE INPUT (SLIDER) DI DALAM CARD ---
-
+# --- 5. INTERFACE INPUT (SLIDER) ---
 with col1:
     st.markdown("""
     <div class="card-top blue-top">
@@ -177,9 +175,7 @@ def calculate_final(eff_on, eff_off, eff_hyb):
     total_luas = jumlah_panel * (p_len * p_wid)
     
     batt_kwh = (batt_v * batt_ah) / 1000
-    
-    # --- LOGIKA BATERAI BARU (DENGAN VARIABLE DoD) ---
-    real_dod = batt_dod / 100 # Konversi ke desimal (misal 80% jadi 0.8)
+    real_dod = batt_dod / 100 
     
     # Kebutuhan Baterai
     qty_batt_on = 0
@@ -191,7 +187,7 @@ def calculate_final(eff_on, eff_off, eff_hyb):
     else:
         qty_batt_hyb = 0
 
-    # === CAPEX CALCULATION ===
+    # CAPEX
     base_capex_on = kwp_needed * price_kwp_on
     base_capex_off = kwp_needed * price_kwp_off
     base_capex_hyb = kwp_needed * price_kwp_hyb
@@ -268,6 +264,7 @@ with col2:
     <div class="card-bot">
         <div class="sec-head">1. Kebutuhan Perangkat</div>
         <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
+        <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
         <div class="row-item"><span>Bank Baterai:</span><span class="val-bold">{res['batt_off']} Unit</span></div>
         <div class="divider"></div>
         <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
@@ -291,6 +288,7 @@ with col3:
     <div class="card-bot">
         <div class="sec-head">1. Kebutuhan Perangkat</div>
         <div class="row-item"><span>Panel Surya:</span><span class="val-bold">{res['panel_qty']} Unit</span></div>
+        <div class="row-item"><span>Total Kapasitas:</span><span class="val-bold">{res['kwp_total']:.2f} kWp</span></div>
         <div class="row-item"><span>Bank Baterai:</span><span class="val-bold">{res['batt_hyb']} Unit</span></div>
         <div class="divider"></div>
         <div class="sec-head">2. Analisis Investasi (CAPEX)</div>
