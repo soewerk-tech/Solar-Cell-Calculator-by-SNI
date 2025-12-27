@@ -9,47 +9,49 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. LOGO LOADER (Check logo.png) ---
-# Fungsi untuk menampilkan logo dengan debug info
-def render_header():
-    col_logo, col_text = st.columns([1, 4])
-    
-    with col_logo:
-        # Prioritas 1: File 'logo.png' (sesuai request user)
-        if os.path.exists("logo.png"):
-            st.image("logo.png", width=250)
-        # Prioritas 2: File lama 'LOGO HORIZONTAL.png'
-        elif os.path.exists("LOGO HORIZONTAL.png"):
-            st.image("LOGO HORIZONTAL.png", width=250)
-        else:
-            # Jika tidak ada logo, tampilkan placeholder dan list file
-            st.warning("⚠️ Logo 'logo.png' tidak ditemukan.")
-            with st.expander("Lihat File di Server"):
-                st.write("File yang terbaca sistem:")
-                st.code(os.listdir('.'))
+# --- 2. JUDUL & LOGO AUTO-HUNTER ---
+# Fungsi ini mencari file gambar apa saja yang ada di folder
+def get_logo_file():
+    files = os.listdir('.')
+    # Cari file berakhiran png, jpg, atau jpeg (tidak peduli huruf besar/kecil)
+    for f in files:
+        if f.lower().endswith(('.png', '.jpg', '.jpeg')):
+            return f
+    return None
 
-    with col_text:
-        st.title("☀️ Kalkulator Studi Kelayakan PLTS")
-        st.markdown("""
-        <div style="color: #555; font-size: 16px;">
-            Analisis komprehensif kelayakan finansial proyek Pembangkit Listrik Tenaga Surya (PLTS) 
-            mencakup perbandingan skema <b>Capital Expenditure (CAPEX)</b> dan <b>Operational Expenditure (OPEX)</b>.
-        </div>
-        """, unsafe_allow_html=True)
+logo_found = get_logo_file()
 
-render_header()
+col_logo, col_title = st.columns([1, 4])
+
+with col_logo:
+    if logo_found:
+        st.image(logo_found, width=220)
+        st.caption(f"Logo terdeteksi: {logo_found}") # Debugging info
+    else:
+        st.error("❌ Tidak ada file gambar ditemukan.")
+        st.code(os.listdir('.')) # Tampilkan isi folder untuk debug
+
+with col_title:
+    st.title("☀️ Kalkulator Studi Kelayakan PLTS")
+    st.markdown("""
+    <div style="color: #555; font-size: 16px;">
+        Analisis komprehensif kelayakan finansial proyek Pembangkit Listrik Tenaga Surya (PLTS) 
+        mencakup perbandingan skema <b>Capital Expenditure (CAPEX)</b> dan <b>Operational Expenditure (OPEX)</b>.
+    </div>
+    """, unsafe_allow_html=True)
+
 st.markdown("---")
 
 # --- 3. SIDEBAR INPUT ---
 with st.sidebar:
     st.header("⚙️ Parameter Proyek")
     
-    # --- SLIDER HYBRID (FIX: START 0%) ---
+    # --- SLIDER HYBRID (DIPAKSA MULAI DARI 0) ---
     st.markdown("### 🎚️ Target Hybrid")
-    st.info("Tentukan persentase beban yang dicover sistem Hybrid:")
+    st.info("Persentase beban yang dicover sistem Hybrid:")
     
-    # PERBAIKAN: min_value=0 (Mulai dari 0%)
-    target_eff_hyb = st.slider("Target Efisiensi Hybrid (%)", min_value=0, max_value=100, value=90, step=5)
+    # PERHATIKAN: angka 0 pertama adalah min_value
+    target_eff_hyb = st.slider("Target Efisiensi (%)", 0, 100, 90, 5)
     
     st.markdown("---")
 
@@ -97,7 +99,6 @@ def calculate():
     
     # Logic Hybrid Dinamis (0 - 100%)
     if target_eff_hyb > 0:
-        # Menghitung kebutuhan baterai berdasarkan % target slider
         kebutuhan_backup_kwh = daya_harian * (target_eff_hyb / 100)
         qty_batt_hyb = math.ceil(kebutuhan_backup_kwh / (batt_kwh * dod))
     else:
@@ -282,7 +283,7 @@ with col3:
 <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Analisis Layanan (OPEX)</div>
-<div class="row-item"><span>Efisiensi Penghematan:</span><span class="val-bold">{res['eff_hyb']}%</span></div>
+<div class="row-item"><span>Target Efisiensi:</span><span class="val-bold">{res['eff_hyb']}%</span></div>
 <div class="row-item"><span>Biaya Langganan PLTS:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
 <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp {res['sisa_hyb']:,.0f}</span></div>
 <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
