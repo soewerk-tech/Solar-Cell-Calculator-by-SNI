@@ -9,36 +9,23 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. JUDUL & LOGO AUTO-HUNTER ---
-# Fungsi ini mencari file gambar apa saja yang ada di folder
-def get_logo_file():
-    files = os.listdir('.')
-    # Cari file berakhiran png, jpg, atau jpeg (tidak peduli huruf besar/kecil)
-    for f in files:
-        if f.lower().endswith(('.png', '.jpg', '.jpeg')):
-            return f
-    return None
-
-logo_found = get_logo_file()
-
+# --- 2. LOGO & JUDUL (DEBUG MODE) ---
 col_logo, col_title = st.columns([1, 4])
 
 with col_logo:
-    if logo_found:
-        st.image(logo_found, width=220)
-        st.caption(f"Logo terdeteksi: {logo_found}") # Debugging info
+    # KITA PAKSA BACA 'logo.png'. 
+    # Pastikan di GitHub nama filenya 'logo.png' (huruf kecil semua)
+    if os.path.exists("logo.png"):
+        st.image("logo.png", width=220)
     else:
-        st.error("❌ Tidak ada file gambar ditemukan.")
-        st.code(os.listdir('.')) # Tampilkan isi folder untuk debug
+        # JIKA GAGAL, DIA AKAN KASIH TAU FILE APA YANG ADA
+        st.error("Logo Tidak Ditemukan!")
+        st.write("File yang ada di server:")
+        st.code(os.listdir('.')) 
 
 with col_title:
     st.title("☀️ Kalkulator Studi Kelayakan PLTS")
-    st.markdown("""
-    <div style="color: #555; font-size: 16px;">
-        Analisis komprehensif kelayakan finansial proyek Pembangkit Listrik Tenaga Surya (PLTS) 
-        mencakup perbandingan skema <b>Capital Expenditure (CAPEX)</b> dan <b>Operational Expenditure (OPEX)</b>.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("Analisis CAPEX, OPEX, dan BEP proyek PLTS.")
 
 st.markdown("---")
 
@@ -46,11 +33,9 @@ st.markdown("---")
 with st.sidebar:
     st.header("⚙️ Parameter Proyek")
     
-    # --- SLIDER HYBRID (DIPAKSA MULAI DARI 0) ---
+    # SLIDER DIATUR MANUAL KE 0
     st.markdown("### 🎚️ Target Hybrid")
-    st.info("Persentase beban yang dicover sistem Hybrid:")
-    
-    # PERHATIKAN: angka 0 pertama adalah min_value
+    # min_value=0, max_value=100
     target_eff_hyb = st.slider("Target Efisiensi (%)", 0, 100, 90, 5)
     
     st.markdown("---")
@@ -97,7 +82,7 @@ def calculate():
     dod = 0.8
     qty_batt_off = math.ceil(daya_harian / (batt_kwh * dod))
     
-    # Logic Hybrid Dinamis (0 - 100%)
+    # Logic Hybrid (0 - 100%)
     if target_eff_hyb > 0:
         kebutuhan_backup_kwh = daya_harian * (target_eff_hyb / 100)
         qty_batt_hyb = math.ceil(kebutuhan_backup_kwh / (batt_kwh * dod))
