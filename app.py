@@ -9,47 +9,48 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. MAGIC LOGO LOADER (Pencari Logo Otomatis) ---
-def get_any_logo():
-    # Mencari semua file di folder saat ini
-    files = os.listdir('.')
-    # Filter hanya file gambar (png, jpg, jpeg)
-    logo_files = [f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+# --- 2. LOGO LOADER (Check logo.png) ---
+# Fungsi untuk menampilkan logo dengan debug info
+def render_header():
+    col_logo, col_text = st.columns([1, 4])
     
-    if logo_files:
-        # Kembalikan file gambar pertama yang ditemukan
-        return logo_files[0]
-    return None
+    with col_logo:
+        # Prioritas 1: File 'logo.png' (sesuai request user)
+        if os.path.exists("logo.png"):
+            st.image("logo.png", width=250)
+        # Prioritas 2: File lama 'LOGO HORIZONTAL.png'
+        elif os.path.exists("LOGO HORIZONTAL.png"):
+            st.image("LOGO HORIZONTAL.png", width=250)
+        else:
+            # Jika tidak ada logo, tampilkan placeholder dan list file
+            st.warning("⚠️ Logo 'logo.png' tidak ditemukan.")
+            with st.expander("Lihat File di Server"):
+                st.write("File yang terbaca sistem:")
+                st.code(os.listdir('.'))
 
-logo_found = get_any_logo()
+    with col_text:
+        st.title("☀️ Kalkulator Studi Kelayakan PLTS")
+        st.markdown("""
+        <div style="color: #555; font-size: 16px;">
+            Analisis komprehensif kelayakan finansial proyek Pembangkit Listrik Tenaga Surya (PLTS) 
+            mencakup perbandingan skema <b>Capital Expenditure (CAPEX)</b> dan <b>Operational Expenditure (OPEX)</b>.
+        </div>
+        """, unsafe_allow_html=True)
 
-# Tampilkan Logo jika ketemu
-col_logo, col_title = st.columns([1, 4])
-with col_logo:
-    if logo_found:
-        st.image(logo_found, width=200)
-    else:
-        st.warning("⚠️ Belum ada file gambar (.png/.jpg) di GitHub.")
-
-with col_title:
-    st.title("☀️ Kalkulator Studi Kelayakan PLTS")
-    st.markdown("""
-    <div style="color: #555; font-size: 16px;">
-        Analisis komprehensif kelayakan finansial proyek Pembangkit Listrik Tenaga Surya (PLTS) 
-        mencakup perbandingan skema <b>Capital Expenditure (CAPEX)</b> dan <b>Operational Expenditure (OPEX)</b>.
-    </div>
-    """, unsafe_allow_html=True)
-
+render_header()
 st.markdown("---")
 
 # --- 3. SIDEBAR INPUT ---
 with st.sidebar:
     st.header("⚙️ Parameter Proyek")
     
-    # --- FITUR HYBRID (Ditaruh Paling Atas agar terlihat) ---
+    # --- SLIDER HYBRID (FIX: START 0%) ---
     st.markdown("### 🎚️ Target Hybrid")
-    st.info("Atur seberapa besar peran solar panel untuk sistem Hybrid:")
+    st.info("Tentukan persentase beban yang dicover sistem Hybrid:")
+    
+    # PERBAIKAN: min_value=0 (Mulai dari 0%)
     target_eff_hyb = st.slider("Target Efisiensi Hybrid (%)", min_value=0, max_value=100, value=90, step=5)
+    
     st.markdown("---")
 
     with st.expander("A. Profil Beban & Lokasi", expanded=True):
@@ -94,10 +95,11 @@ def calculate():
     dod = 0.8
     qty_batt_off = math.ceil(daya_harian / (batt_kwh * dod))
     
-    # Logic Hybrid Dinamis (Berdasarkan Slider)
+    # Logic Hybrid Dinamis (0 - 100%)
     if target_eff_hyb > 0:
+        # Menghitung kebutuhan baterai berdasarkan % target slider
         kebutuhan_backup_kwh = daya_harian * (target_eff_hyb / 100)
-        qty_batt_hyb = math.ceil((kebutuhan_backup_kwh * 0.5) / (batt_kwh * dod)) # Asumsi backup 50% dari target
+        qty_batt_hyb = math.ceil(kebutuhan_backup_kwh / (batt_kwh * dod))
     else:
         qty_batt_hyb = 0
     
@@ -184,7 +186,7 @@ st.markdown(f"""
 
 col1, col2, col3 = st.columns(3)
 
-# HTML CARD SECTION
+# KOLOM 1: ON GRID
 with col1:
     st.markdown(f"""
 <div class="card card-blue">
@@ -280,7 +282,7 @@ with col3:
 <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Analisis Layanan (OPEX)</div>
-<div class="row-item"><span>Target Efisiensi:</span><span class="val-bold">{res['eff_hyb']}%</span></div>
+<div class="row-item"><span>Efisiensi Penghematan:</span><span class="val-bold">{res['eff_hyb']}%</span></div>
 <div class="row-item"><span>Biaya Langganan PLTS:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
 <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp {res['sisa_hyb']:,.0f}</span></div>
 <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
