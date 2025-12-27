@@ -10,9 +10,14 @@ st.set_page_config(
 )
 
 # --- 2. LOGO & JUDUL ---
-if os.path.exists("LOGO HORIZONTAL.png"):
-    st.image("LOGO HORIZONTAL.png", width=350)
+# Pastikan nama file di GitHub adalah 'logo.png' (huruf kecil semua)
+if os.path.exists("logo.png"):
+    st.image("logo.png", width=300)
+elif os.path.exists("LOGO HORIZONTAL.png"): # Cek nama alternatif
+    st.image("LOGO HORIZONTAL.png", width=300)
 else:
+    # Pesan Error jika logo tidak ketemu
+    st.warning("⚠️ Logo tidak muncul? Pastikan nama file di GitHub adalah 'logo.png' (huruf kecil semua).")
     st.markdown("### SOLUSI NETWORK INDONESIA")
 
 st.title("☀️ Kalkulator Studi Kelayakan PLTS")
@@ -45,17 +50,19 @@ with st.sidebar:
         batt_v = st.number_input("Voltase Baterai (V)", value=48, step=12)
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
 
-    with st.expander("C. Asumsi Finansial & Target"):
+    with st.expander("C. Target & Asumsi Finansial", expanded=True):
+        # SLIDER HYBRID (FITUR REQUEST)
+        st.markdown("**Target Efisiensi:**")
+        target_eff_hyb = st.slider("Target Hybrid System (%)", min_value=50, max_value=100, value=90, step=5, help="Persentase kebutuhan energi yang akan disuplai oleh PLTS Hybrid")
+        
+        st.markdown("---")
+        st.markdown("**Asumsi Biaya:**")
         price_panel = st.number_input("Biaya EPC/kWp (Rp)", value=14000000, step=500000)
         price_batt = st.number_input("Harga Baterai/Unit (Rp)", value=16000000, step=500000)
         
-        # INPUT AFTERSALES (Maintenance Tahunan)
-        price_aftersales = st.number_input("Biaya Pemeliharaan/Thn (Rp)", value=2500000, step=100000, help="Biaya operasional maintenance (O&M) dan cleaning per lokasi per tahun.")
+        price_aftersales = st.number_input("Biaya Pemeliharaan (O&M)/Thn", value=2500000, step=100000, help="Biaya maintenance rutin tahunan per lokasi.")
         
         opex_discount = st.number_input("Diskon Tarif PPA/Sewa (%)", value=10, step=1)
-        st.markdown("---")
-        # INPUT TARGET HYBRID
-        target_eff_hyb = st.slider("Target Penghematan Hybrid (%)", min_value=50, max_value=100, value=90, step=5)
 
 # --- 4. LOGIKA HITUNGAN ---
 def calculate():
@@ -91,27 +98,26 @@ def calculate():
     unit_cost_off = capex_off / total_kapasitas_kwp
     unit_cost_hyb = capex_hyb / total_kapasitas_kwp
 
-    # Efisiensi & Penghematan Gross
+    # Efisiensi
     eff_on = 40  # Locked regulasi
     eff_off = 100 
-    eff_hyb = target_eff_hyb 
+    eff_hyb = target_eff_hyb # Sesuai Slider
     
     hemat_gross_on = biaya_pln_tahunan * (eff_on / 100)
     hemat_gross_off = biaya_pln_tahunan * (eff_off / 100)
     hemat_gross_hyb = biaya_pln_tahunan * (eff_hyb / 100)
 
-    # Net Savings (Gross Savings - Biaya Maintenance)
+    # Net Savings (Gross - O&M)
     net_save_on = hemat_gross_on - price_aftersales
     net_save_off = hemat_gross_off - price_aftersales
     net_save_hyb = hemat_gross_hyb - price_aftersales
 
     # BEP (ROI)
-    # Jika net savings negatif (biaya maintenance > hemat), BEP jadi 0/tak terhingga
     bep_on = capex_on / net_save_on if net_save_on > 0 else 0
     bep_off = capex_off / net_save_off if net_save_off > 0 else 0
     bep_hyb = capex_hyb / net_save_hyb if net_save_hyb > 0 else 0
     
-    # OPEX (Sewa)
+    # OPEX
     tarif_sewa = tarif_pln * (1 - (opex_discount/100))
     
     return {
@@ -164,7 +170,7 @@ st.markdown(f"""
 
 col1, col2, col3 = st.columns(3)
 
-# HTML CARD SECTION (TANPA SPASI DEPAN)
+# KOLOM 1: ON GRID
 with col1:
     st.markdown(f"""
 <div class="card card-blue">
