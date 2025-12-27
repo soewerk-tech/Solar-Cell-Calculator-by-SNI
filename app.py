@@ -1,5 +1,6 @@
 import streamlit as st
 import math
+import os
 
 # --- 1. KONFIGURASI HALAMAN ---
 st.set_page_config(
@@ -8,7 +9,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. JUDUL APLIKASI ---
+# --- 2. LOGO & JUDUL ---
+if os.path.exists("LOGO HORIZONTAL.png"):
+    st.image("LOGO HORIZONTAL.png", width=350)
+else:
+    st.markdown("### SOLUSI NETWORK INDONESIA")
+
 st.title("☀️ Kalkulator Studi Kelayakan PLTS")
 st.markdown("""
 <style>
@@ -39,10 +45,17 @@ with st.sidebar:
         batt_v = st.number_input("Voltase Baterai (V)", value=48, step=12)
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
 
-    with st.expander("C. Asumsi Finansial"):
+    with st.expander("C. Asumsi Finansial & Target"):
         price_panel = st.number_input("Biaya EPC/kWp (Rp)", value=14000000, step=500000)
         price_batt = st.number_input("Harga Baterai/Unit (Rp)", value=16000000, step=500000)
+        
+        # INPUT AFTERSALES (Maintenance Tahunan)
+        price_aftersales = st.number_input("Biaya Pemeliharaan/Thn (Rp)", value=2500000, step=100000, help="Biaya operasional maintenance (O&M) dan cleaning per lokasi per tahun.")
+        
         opex_discount = st.number_input("Diskon Tarif PPA/Sewa (%)", value=10, step=1)
+        st.markdown("---")
+        # INPUT TARGET HYBRID
+        target_eff_hyb = st.slider("Target Penghematan Hybrid (%)", min_value=50, max_value=100, value=90, step=5)
 
 # --- 4. LOGIKA HITUNGAN ---
 def calculate():
@@ -51,6 +64,7 @@ def calculate():
     daya_harian = daya_jam * jam_ops
     daya_bulanan = daya_harian * 30
     biaya_pln_bulanan = daya_bulanan * tarif_pln
+    biaya_pln_tahunan = biaya_pln_bulanan * 12
     
     target_prod_harian = daya_harian / (1 - real_loss)
     kwp_needed = target_prod_harian / psh
@@ -77,19 +91,25 @@ def calculate():
     unit_cost_off = capex_off / total_kapasitas_kwp
     unit_cost_hyb = capex_hyb / total_kapasitas_kwp
 
-    # Efisiensi & Penghematan
-    eff_on = 40  # On-Grid max 40% (Permen ESDM limit)
-    eff_off = 100 # Off-Grid 100%
-    eff_hyb = 90  # Hybrid approx 90%
+    # Efisiensi & Penghematan Gross
+    eff_on = 40  # Locked regulasi
+    eff_off = 100 
+    eff_hyb = target_eff_hyb 
     
-    hemat_on_bln = biaya_pln_bulanan * (eff_on / 100)
-    hemat_off_bln = biaya_pln_bulanan * (eff_off / 100)
-    hemat_hyb_bln = biaya_pln_bulanan * (eff_hyb / 100)
+    hemat_gross_on = biaya_pln_tahunan * (eff_on / 100)
+    hemat_gross_off = biaya_pln_tahunan * (eff_off / 100)
+    hemat_gross_hyb = biaya_pln_tahunan * (eff_hyb / 100)
+
+    # Net Savings (Gross Savings - Biaya Maintenance)
+    net_save_on = hemat_gross_on - price_aftersales
+    net_save_off = hemat_gross_off - price_aftersales
+    net_save_hyb = hemat_gross_hyb - price_aftersales
 
     # BEP (ROI)
-    bep_on = capex_on / (hemat_on_bln * 12) if hemat_on_bln > 0 else 0
-    bep_off = capex_off / (hemat_off_bln * 12) if hemat_off_bln > 0 else 0
-    bep_hyb = capex_hyb / (hemat_hyb_bln * 12) if hemat_hyb_bln > 0 else 0
+    # Jika net savings negatif (biaya maintenance > hemat), BEP jadi 0/tak terhingga
+    bep_on = capex_on / net_save_on if net_save_on > 0 else 0
+    bep_off = capex_off / net_save_off if net_save_off > 0 else 0
+    bep_hyb = capex_hyb / net_save_hyb if net_save_hyb > 0 else 0
     
     # OPEX (Sewa)
     tarif_sewa = tarif_pln * (1 - (opex_discount/100))
@@ -101,7 +121,8 @@ def calculate():
         "capex_on": capex_on, "capex_off": capex_off, "capex_hyb": capex_hyb,
         "unit_on": unit_cost_on, "unit_off": unit_cost_off, "unit_hyb": unit_cost_hyb,
         "bep_on": bep_on, "bep_off": bep_off, "bep_hyb": bep_hyb,
-        "eff_on": eff_on, "eff_off": eff_off, "eff_hyb": eff_hyb, # <-- DATA EFISIENSI
+        "eff_on": eff_on, "eff_off": eff_off, "eff_hyb": eff_hyb, 
+        "aftersales": price_aftersales,
         "vendor_on": (daya_bulanan * (eff_on/100)) * tarif_sewa, 
         "sisa_on": (daya_bulanan * (1 - (eff_on/100))) * tarif_pln,
         "vendor_off": daya_bulanan * tarif_sewa,
@@ -143,7 +164,7 @@ st.markdown(f"""
 
 col1, col2, col3 = st.columns(3)
 
-# HTML DI BAWAH INI TANPA INDENTASI AGAR TAMPILAN BENAR
+# HTML CARD SECTION (TANPA SPASI DEPAN)
 with col1:
     st.markdown(f"""
 <div class="card card-blue">
@@ -168,11 +189,15 @@ Mengacu Permen ESDM No. 2/2024 (Ekspor Listrik ditiadakan).
 <span>Biaya per kWp:</span>
 <span class="val-blue">Rp {res['unit_on']/1000000:.1f} Juta /kWp</span>
 </div>
+<div class="row-item" style="color:#d32f2f;">
+<span>Biaya Pemeliharaan (O&M):</span>
+<span>Rp {res['aftersales']/1000000:.1f} Juta /Thn</span>
+</div>
 <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_on']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Analisis Layanan (OPEX)</div>
 <div class="row-item"><span>Efisiensi Penghematan:</span><span class="val-bold">{res['eff_on']}%</span></div>
-<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_on']:,.0f}</span></div>
+<div class="row-item"><span>Biaya Langganan PLTS:</span><span>Rp {res['vendor_on']:,.0f}</span></div>
 <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp {res['sisa_on']:,.0f}</span></div>
 <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
 <span>Total Pengeluaran:</span><span class="val-blue">Rp {(res['vendor_on']+res['sisa_on']):,.0f}</span>
@@ -196,11 +221,15 @@ with col2:
 <span>Biaya per kWp:</span>
 <span class="val-blue">Rp {res['unit_off']/1000000:.1f} Juta /kWp</span>
 </div>
+<div class="row-item" style="color:#d32f2f;">
+<span>Biaya Pemeliharaan (O&M):</span>
+<span>Rp {res['aftersales']/1000000:.1f} Juta /Thn</span>
+</div>
 <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_off']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Analisis Layanan (OPEX)</div>
 <div class="row-item"><span>Efisiensi Penghematan:</span><span class="val-bold">{res['eff_off']}% (Full)</span></div>
-<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_off']:,.0f}</span></div>
+<div class="row-item"><span>Biaya Langganan PLTS:</span><span>Rp {res['vendor_off']:,.0f}</span></div>
 <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp 0</span></div>
 <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
 <span>Total Pengeluaran:</span><span class="val-blue">Rp {res['vendor_off']:,.0f}</span>
@@ -224,11 +253,15 @@ with col3:
 <span>Biaya per kWp:</span>
 <span class="val-blue">Rp {res['unit_hyb']/1000000:.1f} Juta /kWp</span>
 </div>
+<div class="row-item" style="color:#d32f2f;">
+<span>Biaya Pemeliharaan (O&M):</span>
+<span>Rp {res['aftersales']/1000000:.1f} Juta /Thn</span>
+</div>
 <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Analisis Layanan (OPEX)</div>
-<div class="row-item"><span>Efisiensi Penghematan:</span><span class="val-bold">~{res['eff_hyb']}%</span></div>
-<div class="row-item"><span>Bayar Langganan PLTS:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
+<div class="row-item"><span>Efisiensi Penghematan:</span><span class="val-bold">{res['eff_hyb']}%</span></div>
+<div class="row-item"><span>Biaya Langganan PLTS:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
 <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp {res['sisa_hyb']:,.0f}</span></div>
 <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
 <span>Total Pengeluaran:</span><span class="val-green">Rp {(res['vendor_hyb']+res['sisa_hyb']):,.0f}</span>
