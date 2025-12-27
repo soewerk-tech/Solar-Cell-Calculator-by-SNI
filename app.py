@@ -9,45 +9,49 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. LOGIKA PENCARIAN LOGO CERDAS ---
-# Kita buat fungsi untuk mencari logo dengan berbagai kemungkinan nama
-def find_logo():
-    # Daftar kemungkinan nama file (agar lebih fleksibel)
-    possible_names = [
-        "logo.png", "LOGO.png", "Logo.png",
-        "LOGO HORIZONTAL.png", "logo horizontal.png",
-        "logo.jpg", "LOGO.jpg"
-    ]
+# --- 2. MAGIC LOGO LOADER (Pencari Logo Otomatis) ---
+def get_any_logo():
+    # Mencari semua file di folder saat ini
+    files = os.listdir('.')
+    # Filter hanya file gambar (png, jpg, jpeg)
+    logo_files = [f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
     
-    for name in possible_names:
-        if os.path.exists(name):
-            return name # Kembalikan nama yang ketemu
+    if logo_files:
+        # Kembalikan file gambar pertama yang ditemukan
+        return logo_files[0]
     return None
 
-found_logo = find_logo()
+logo_found = get_any_logo()
 
-if found_logo:
-    st.image(found_logo, width=300)
-else:
-    # Header Teks jika logo tidak ketemu
-    st.markdown("### SOLUSI NETWORK INDONESIA")
-    st.info("ℹ️ Logo belum muncul? Cek 'File Checker' di Sidebar bawah.")
+# Tampilkan Logo jika ketemu
+col_logo, col_title = st.columns([1, 4])
+with col_logo:
+    if logo_found:
+        st.image(logo_found, width=200)
+    else:
+        st.warning("⚠️ Belum ada file gambar (.png/.jpg) di GitHub.")
 
-st.title("☀️ Kalkulator Studi Kelayakan PLTS")
-st.markdown("""
-<style>
-    .big-font { font-size:16px !important; color: #555; }
-</style>
-<div class="big-font">
-    Analisis komprehensif kelayakan finansial proyek Pembangkit Listrik Tenaga Surya (PLTS) 
-    mencakup perbandingan skema <b>Capital Expenditure (CAPEX)</b> dan <b>Operational Expenditure (OPEX)</b>.
-</div>
-""", unsafe_allow_html=True)
+with col_title:
+    st.title("☀️ Kalkulator Studi Kelayakan PLTS")
+    st.markdown("""
+    <div style="color: #555; font-size: 16px;">
+        Analisis komprehensif kelayakan finansial proyek Pembangkit Listrik Tenaga Surya (PLTS) 
+        mencakup perbandingan skema <b>Capital Expenditure (CAPEX)</b> dan <b>Operational Expenditure (OPEX)</b>.
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
 
 # --- 3. SIDEBAR INPUT ---
 with st.sidebar:
-    st.header("⚙️ Parameter Teknis")
+    st.header("⚙️ Parameter Proyek")
     
+    # --- FITUR HYBRID (Ditaruh Paling Atas agar terlihat) ---
+    st.markdown("### 🎚️ Target Hybrid")
+    st.info("Atur seberapa besar peran solar panel untuk sistem Hybrid:")
+    target_eff_hyb = st.slider("Target Efisiensi Hybrid (%)", min_value=0, max_value=100, value=90, step=5)
+    st.markdown("---")
+
     with st.expander("A. Profil Beban & Lokasi", expanded=True):
         daya_jam = st.number_input("Rata-rata Beban (kW)", value=1.5, step=0.1)
         jam_ops = st.number_input("Jam Operasional/Hari", value=24, step=1)
@@ -63,35 +67,14 @@ with st.sidebar:
         batt_v = st.number_input("Voltase Baterai (V)", value=48, step=12)
         batt_ah = st.number_input("Ampere Baterai (Ah)", value=100, step=50)
 
-    with st.expander("C. Target & Asumsi Finansial", expanded=True):
-        # SLIDER HYBRID (DINAMIS 0-100%)
-        st.markdown("**Target Efisiensi:**")
-        target_eff_hyb = st.slider("Target Hybrid System (%)", min_value=0, max_value=100, value=90, step=5, help="Persentase kebutuhan energi yang akan disuplai oleh PLTS Hybrid")
-        
-        st.markdown("---")
-        st.markdown("**Asumsi Biaya:**")
+    with st.expander("C. Asumsi Finansial"):
         price_panel = st.number_input("Biaya EPC/kWp (Rp)", value=14000000, step=500000)
         price_batt = st.number_input("Harga Baterai/Unit (Rp)", value=16000000, step=500000)
-        
-        price_aftersales = st.number_input("Biaya Pemeliharaan (O&M)/Thn", value=2500000, step=100000, help="Biaya maintenance rutin tahunan per lokasi.")
-        
+        price_aftersales = st.number_input("Biaya Pemeliharaan (O&M)/Thn", value=2500000, step=100000)
         opex_discount = st.number_input("Diskon Tarif PPA/Sewa (%)", value=10, step=1)
-    
-    # --- FITUR DEBUG (FILE CHECKER) ---
-    st.markdown("---")
-    with st.expander("🔍 System & File Checker"):
-        st.caption("Gunakan ini untuk mengecek nama file logo yang terbaca server.")
-        files = os.listdir('.')
-        image_files = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg'))]
-        if image_files:
-            st.success(f"File Gambar Ditemukan: {image_files}")
-            st.caption("Pastikan nama di atas SAMA PERSIS dengan kode (logo.png).")
-        else:
-            st.error("Tidak ada file gambar (.png/.jpg) ditemukan di server.")
 
 # --- 4. LOGIKA HITUNGAN ---
 def calculate():
-    # Energi Dasar
     real_loss = loss_factor / 100
     daya_harian = daya_jam * jam_ops
     daya_bulanan = daya_harian * 30
@@ -110,35 +93,40 @@ def calculate():
     batt_kwh = (batt_v * batt_ah) / 1000
     dod = 0.8
     qty_batt_off = math.ceil(daya_harian / (batt_kwh * dod))
-    qty_batt_hyb = math.ceil((daya_harian * (target_eff_hyb/100)) / (batt_kwh * dod)) 
-    # Logic Baterai Hybrid disesuaikan dengan target slider
     
-    # CAPEX Total
+    # Logic Hybrid Dinamis (Berdasarkan Slider)
+    if target_eff_hyb > 0:
+        kebutuhan_backup_kwh = daya_harian * (target_eff_hyb / 100)
+        qty_batt_hyb = math.ceil((kebutuhan_backup_kwh * 0.5) / (batt_kwh * dod)) # Asumsi backup 50% dari target
+    else:
+        qty_batt_hyb = 0
+    
+    # CAPEX
     base_capex = kwp_needed * price_panel
     capex_on = base_capex + 10000000
     capex_off = base_capex + (qty_batt_off * price_batt) + 25000000
     capex_hyb = base_capex + (qty_batt_hyb * price_batt) + 30000000
     
-    # Unit Cost (Rp/kWp)
+    # Unit Cost
     unit_cost_on = capex_on / total_kapasitas_kwp
     unit_cost_off = capex_off / total_kapasitas_kwp
     unit_cost_hyb = capex_hyb / total_kapasitas_kwp
 
-    # Efisiensi
-    eff_on = 40  # Locked regulasi
+    # Efisiensi & Hemat
+    eff_on = 40  
     eff_off = 100 
-    eff_hyb = target_eff_hyb # Sesuai Slider
+    eff_hyb = target_eff_hyb 
     
     hemat_gross_on = biaya_pln_tahunan * (eff_on / 100)
     hemat_gross_off = biaya_pln_tahunan * (eff_off / 100)
     hemat_gross_hyb = biaya_pln_tahunan * (eff_hyb / 100)
 
-    # Net Savings (Gross - O&M)
+    # Net Savings
     net_save_on = hemat_gross_on - price_aftersales
     net_save_off = hemat_gross_off - price_aftersales
     net_save_hyb = hemat_gross_hyb - price_aftersales
 
-    # BEP (ROI)
+    # BEP
     bep_on = capex_on / net_save_on if net_save_on > 0 else 0
     bep_off = capex_off / net_save_off if net_save_off > 0 else 0
     bep_hyb = capex_hyb / net_save_hyb if net_save_hyb > 0 else 0
@@ -196,7 +184,7 @@ st.markdown(f"""
 
 col1, col2, col3 = st.columns(3)
 
-# KOLOM 1: ON GRID
+# HTML CARD SECTION
 with col1:
     st.markdown(f"""
 <div class="card card-blue">
@@ -292,7 +280,7 @@ with col3:
 <div class="row-item"><span>ROI (Balik Modal):</span><span class="val-blue">{res['bep_hyb']:.1f} Tahun</span></div>
 <div class="divider"></div>
 <div class="sec-head">3. Analisis Layanan (OPEX)</div>
-<div class="row-item"><span>Efisiensi Penghematan:</span><span class="val-bold">{res['eff_hyb']}%</span></div>
+<div class="row-item"><span>Target Efisiensi:</span><span class="val-bold">{res['eff_hyb']}%</span></div>
 <div class="row-item"><span>Biaya Langganan PLTS:</span><span>Rp {res['vendor_hyb']:,.0f}</span></div>
 <div class="row-item"><span>Sisa Tagihan PLN:</span><span>Rp {res['sisa_hyb']:,.0f}</span></div>
 <div class="row-item" style="margin-top:5px; background:#f5f5f5; padding:5px; border-radius:5px;">
